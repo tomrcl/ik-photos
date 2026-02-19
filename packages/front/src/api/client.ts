@@ -27,6 +27,11 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
         headers,
         credentials: "include",
       });
+      // If still 401 after refresh (e.g. expired Infomaniak token), logout
+      if (res.status === 401) {
+        logout();
+        throw new Error(translate("error.sessionExpired"));
+      }
     } else if (getAccessToken()) {
       // Only logout if we haven't already been logged out by another request
       logout();
