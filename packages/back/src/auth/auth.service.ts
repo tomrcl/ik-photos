@@ -12,6 +12,9 @@ interface TokenPair {
   refreshToken: string;
 }
 
+// Pre-computed bcrypt hash used to keep constant timing when user is not found
+const DUMMY_HASH = '$2a$12$000000000000000000000uGBOFMembJuNqKRkU6CrhMfmj5mVjBG';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -50,12 +53,9 @@ export class AuthService {
       .where(eq(account.email, email))
       .limit(1);
 
-    if (!found) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const valid = await bcrypt.compare(password, found.passwordHash);
-    if (!valid) {
+    // Always run bcrypt.compare to prevent timing-based user enumeration
+    const valid = await bcrypt.compare(password, found?.passwordHash ?? DUMMY_HASH);
+    if (!found || !valid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 

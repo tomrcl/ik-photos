@@ -1,5 +1,6 @@
 import { Controller, Post, Get, Put, Body, Req, Res, HttpCode, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { KdriveService } from '../kdrive/kdrive.service';
@@ -15,6 +16,7 @@ export class AuthController {
 
   @Public()
   @Post('register')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async register(
     @Body() body: { email: string; password: string; infomaniakToken: string },
     @Res({ passthrough: true }) res: Response,
@@ -27,6 +29,7 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async login(
     @Body() body: { email: string; password: string },
     @Res({ passthrough: true }) res: Response,
@@ -65,13 +68,14 @@ export class AuthController {
   @Public()
   @Post('verify-token')
   @HttpCode(200)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async verifyToken(@Body() body: { infomaniakToken: string }) {
     if (!body.infomaniakToken) {
       throw new BadRequestException('Token is required');
     }
     try {
-      const drives = await this.kdrive.listDrives(body.infomaniakToken);
-      return { valid: true, drives: drives.length };
+      await this.kdrive.listDrives(body.infomaniakToken);
+      return { valid: true };
     } catch {
       return { valid: false };
     }

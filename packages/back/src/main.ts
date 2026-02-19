@@ -47,6 +47,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   logMemory('after create');
 
+  if (process.env.LOCAL_MODE === 'true' && process.env.NODE_ENV === 'production') {
+    console.error('FATAL: LOCAL_MODE must not be enabled in production');
+    process.exit(1);
+  }
+
   if (process.env.LOCAL_MODE === 'true') {
     const dbService = app.get(DbService);
     const cryptoService = app.get(CryptoService);

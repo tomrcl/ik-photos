@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Delete, Body, Param, Query, Req, Res, ParseIntPipe, NotFoundException, BadRequestException } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { eq } from 'drizzle-orm';
 import { count } from 'drizzle-orm';
@@ -10,6 +11,15 @@ import { DbService } from '../db/db.service';
 import { photo, drive } from '../db/schema';
 import { RateLimiter } from '../indexation/rate-limiter';
 
+/** Remove control chars, path separators, and encode for Content-Disposition */
+function sanitizeFilename(name: string): string {
+  return name
+    .replace(/[\\/:*?"<>|\x00-\x1f]/g, '_')
+    .replace(/\.{2,}/g, '_')
+    .slice(0, 255);
+}
+
+@SkipThrottle()
 @Controller('drives/:kdriveId/photos')
 export class PhotosController {
   constructor(
@@ -133,7 +143,7 @@ export class PhotosController {
     const { buffer, contentType, filename } = await this.kdrive.fetchDownload(token, kdriveId, foundPhoto.kdriveFileId);
 
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${sanitizeFilename(filename)}"`);
     res.send(buffer);
   }
 
@@ -265,7 +275,7 @@ export class PhotosController {
     for (const p of foundPhotos) {
       await this.rateLimiter.acquire(accountId);
       const { stream } = await this.kdrive.fetchDownloadStream(token, kdriveId, p.kdriveFileId);
-      archive.append(stream, { name: uniqueName(p.name) });
+      archive.append(stream, { name: uniqueName(sanitizeFilename(p.name)) });
     }
 
     await archive.finalize();

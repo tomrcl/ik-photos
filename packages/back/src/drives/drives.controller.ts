@@ -1,8 +1,10 @@
 import { Controller, Get, Post, Param, Query, Req, ParseIntPipe } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { DrivesService } from './drives.service';
 import { IndexationService } from '../indexation/indexation.service';
 
+@SkipThrottle()
 @Controller('drives')
 export class DrivesController {
   constructor(

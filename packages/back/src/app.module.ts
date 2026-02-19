@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
 import * as Joi from 'joi';
 import { DbModule } from './db/db.module';
 import { CryptoModule } from './crypto/crypto.module';
@@ -43,6 +44,7 @@ import { IndexationModule } from './indexation/indexation.module';
       }),
     }),
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 30 }]),
     DbModule,
     CryptoModule,
     AuthModule,
