@@ -13,18 +13,18 @@ export function isLocalMode(): boolean {
 
 export function saveAccessToken(token: string): void {
   accessToken = token;
-  sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
+  localStorage.setItem(ACCESS_TOKEN_KEY, token);
 }
 
 export function getAccessToken(): string | null {
   if (accessToken) return accessToken;
-  accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+  accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
   return accessToken;
 }
 
 export function clearTokens(): void {
   accessToken = null;
-  sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
 }
 
 export function isLoggedIn(): boolean {

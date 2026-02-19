@@ -28,6 +28,22 @@ async function boot() {
     // Backend not reachable, continue normally
   }
 
+  // If not logged in, try to recover session via refresh cookie
+  if (!isLoggedIn()) {
+    try {
+      const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (refreshRes.ok) {
+        const data = await refreshRes.json();
+        saveAccessToken(data.accessToken);
+      }
+    } catch {
+      // No valid refresh cookie, continue to login
+    }
+  }
+
   if (!window.location.hash || window.location.hash === "#") {
     navigate(isLoggedIn() ? "drives" : "login");
   }
