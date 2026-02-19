@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ik-photos</title>
+    <script>
+      (function() {
+        var t = localStorage.getItem('ik_theme');
+        var dark = t === 'dark' || (!t || t === 'system') && matchMedia('(prefers-color-scheme: dark)').matches;
+        if (dark) document.documentElement.classList.add('dark');
+        var l = localStorage.getItem('ik_locale') || navigator.language.slice(0,2);
+        if (['fr','en','de','es','it'].indexOf(l) < 0) l = 'en';
+        document.documentElement.lang = l;
+      })();
+    </script>
+  </head>
+  <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen">
+    <div id="app"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
