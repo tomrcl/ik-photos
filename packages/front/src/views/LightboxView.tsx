@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { previewUrl, streamUrl, thumbnailUrl, downloadPhoto, deletePhotos, type Photo, type MonthCount } from "../api/files.ts";
 import { formatDate } from "../utils/format.ts";
@@ -150,6 +150,24 @@ export function LightboxView({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [goBack, navigatePhoto, showDeleteConfirm]);
 
+  // Touch swipe for mobile navigation
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, []);
+
+  const onTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchStart.current) return;
+    const dx = e.changedTouches[0].clientX - touchStart.current.x;
+    const dy = e.changedTouches[0].clientY - touchStart.current.y;
+    touchStart.current = null;
+    // Only trigger if horizontal swipe is dominant and long enough
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      navigatePhoto(dx > 0 ? -1 : 1);
+    }
+  }, [navigatePhoto]);
+
   return (
     <div
       className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center"
@@ -210,6 +228,8 @@ export function LightboxView({
         onClick={(e) => {
           if (e.target === e.currentTarget) goBack();
         }}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
       >
         {isVideo ? (
           <video
