@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { syncDrives, listDrives, startIndexation, type Drive } from "../api/drives.ts";
+import { syncDrives, listDrives, startIndexation, TokenExpiredError, type Drive } from "../api/drives.ts";
 import { logout } from "../api/client.ts";
 import { Header } from "../components/Header.tsx";
 import { Spinner } from "../components/Spinner.tsx";
@@ -83,10 +83,16 @@ export function DrivePickerView() {
       }
       return listDrives();
     },
+    retry: (_, error) => !(error instanceof TokenExpiredError),
+    refetchOnWindowFocus: false,
     refetchInterval: (data) =>
       data?.some((d) => d.indexStatus === "INDEXING") ? 2000 : false,
   });
   const { data: drives, isLoading, isError } = query;
+
+  if (query.error instanceof TokenExpiredError) {
+    navigate("token?expired");
+  }
 
   return (
     <>
@@ -96,9 +102,7 @@ export function DrivePickerView() {
 
         {isError && (
           <div className="text-center py-12">
-            <p className="text-red-500 mb-4">
-              {t("drives.error")}
-            </p>
+            <p className="text-red-500 mb-4">{t("drives.error")}</p>
             <button
               onClick={() => logout()}
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg cursor-pointer"

@@ -1,4 +1,5 @@
 const ACCESS_TOKEN_KEY = "ik_access_token";
+const REFRESH_TOKEN_KEY = "ik_refresh_token";
 
 let accessToken: string | null = null;
 let _localMode = false;
@@ -22,9 +23,18 @@ export function getAccessToken(): string | null {
   return accessToken;
 }
 
+export function saveRefreshToken(token: string): void {
+  localStorage.setItem(REFRESH_TOKEN_KEY, token);
+}
+
+export function getRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
 export function clearTokens(): void {
   accessToken = null;
   localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
 export function isLoggedIn(): boolean {

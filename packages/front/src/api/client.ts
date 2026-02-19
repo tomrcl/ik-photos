@@ -1,5 +1,5 @@
 import { API_BASE } from "../config.ts";
-import { getAccessToken, saveAccessToken, clearTokens } from "../auth/token-store.ts";
+import { getAccessToken, saveAccessToken, clearTokens, getRefreshToken, saveRefreshToken } from "../auth/token-store.ts";
 import { notifyAuthChange } from "../hooks/useAuth.ts";
 import { translate } from "../i18n/i18n-store.ts";
 
@@ -13,7 +13,6 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
   let res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers,
-    credentials: "include",
   });
 
   // Try refresh on 401
@@ -25,7 +24,6 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
       res = await fetch(`${API_BASE}${path}`, {
         ...options,
         headers,
-        credentials: "include",
       });
       // If still 401 after refresh (e.g. expired Infomaniak token), logout
       if (res.status === 401) {
@@ -56,13 +54,17 @@ async function tryRefresh(): Promise<boolean> {
 
 async function doRefresh(): Promise<boolean> {
   try {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return false;
     const res = await fetch(`${API_BASE}/auth/refresh`, {
       method: "POST",
-      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
     });
     if (!res.ok) return false;
     const data = await res.json();
     saveAccessToken(data.accessToken);
+    saveRefreshToken(data.refreshToken);
     return true;
   } catch {
     return false;
@@ -93,14 +95,9 @@ export async function updateInfomaniakToken(token: string): Promise<void> {
 }
 
 export function logout(): void {
-  const token = getAccessToken();
-  if (token) {
-    fetch(`${API_BASE}/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-      headers: { Authorization: `Bearer ${token}` },
-    }).catch(() => {});
-  }
+  fetch(`${API_BASE}/auth/logout`, {
+    method: "POST",
+  }).catch(() => {});
   clearTokens();
   notifyAuthChange();
   window.location.hash = "#login";

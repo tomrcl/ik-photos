@@ -19,11 +19,6 @@ if (!process.env.DATABASE_URL && process.env.DB_HOST) {
   process.env.DATABASE_URL = `postgresql://${user}:${pass}@${host}:${port}/${name}`;
 }
 
-function logMemory(label: string) {
-  const mem = process.memoryUsage();
-  console.log(`[MEM ${label}] RSS=${Math.round(mem.rss / 1024 / 1024)}MB Heap=${Math.round(mem.heapUsed / 1024 / 1024)}/${Math.round(mem.heapTotal / 1024 / 1024)}MB`);
-}
-
 // Catch any uncaught error to see what kills the process
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION:', err);
@@ -42,10 +37,7 @@ process.on('SIGINT', () => {
 });
 
 async function bootstrap() {
-  logMemory('start');
-
   const app = await NestFactory.create(AppModule);
-  logMemory('after create');
 
   if (process.env.LOCAL_MODE === 'true' && process.env.NODE_ENV === 'production') {
     console.error('FATAL: LOCAL_MODE must not be enabled in production');
@@ -99,11 +91,7 @@ async function bootstrap() {
   const port = config.get<number>('PORT', 3004);
   const host = process.env.HOST ?? '::';
   await app.listen(port, host);
-  logMemory('after listen');
   console.log(`Backend running on http://${host}:${port}`);
-
-  // Log memory every 30s to track growth
-  setInterval(() => logMemory('periodic'), 30000);
 }
 bootstrap().catch(err => {
   console.error('FATAL:', err);

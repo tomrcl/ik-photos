@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
-import { logout, updateInfomaniakToken } from "../api/client.ts";
+import { logout } from "../api/client.ts";
 import { useTheme } from "../theme/useTheme.ts";
 import type { ThemeChoice } from "../theme/theme-store.ts";
 import { useI18n } from "../i18n/useI18n.ts";
 import { localeOptions, type TKeyOrPlural } from "../i18n/translations/index.ts";
+import { navigate } from "../hooks/useHash.ts";
 
 export interface Breadcrumb {
   label: string;
@@ -23,88 +24,8 @@ const themeOptions: { value: ThemeChoice; key: TKeyOrPlural; icon: string }[] = 
   { value: "dark", key: "theme.dark", icon: "\uD83C\uDF19" },
 ];
 
-function TokenModal({ onClose }: { onClose: () => void }) {
-  const { t } = useI18n();
-  const [token, setToken] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
-  const backdropRef = useRef<HTMLDivElement>(null);
-
-  async function handleSave() {
-    if (!token.trim()) return;
-    setSaving(true);
-    setError("");
-    try {
-      await updateInfomaniakToken(token.trim());
-      setSuccess(true);
-      setTimeout(onClose, 800);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div
-      ref={backdropRef}
-      onClick={(e) => e.target === backdropRef.current && onClose()}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-    >
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
-          {t("token.title")}
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          {t("token.description")}{" "}
-          <a
-            href="https://manager.infomaniak.com/v3/ng/profile/user/token/list"
-            target="_blank"
-            rel="noreferrer"
-            className="text-blue-600 dark:text-blue-400 underline"
-          >
-            {t("token.createLink")}
-          </a>
-          <br />
-          <span className="text-xs text-gray-400 dark:text-gray-500">{t("login.tokenEncrypted")}</span>
-        </p>
-
-        <input
-          type="password"
-          placeholder={t("token.placeholder")}
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSave()}
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg py-2.5 px-3 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
-        />
-
-        {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
-        {success && <p className="text-green-600 dark:text-green-400 text-sm mb-3">{t("token.success")}</p>}
-
-        <div className="flex gap-2 justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg cursor-pointer"
-          >
-            {t("token.cancel")}
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !token.trim()}
-            className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg cursor-pointer"
-          >
-            {saving ? "..." : t("token.save")}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function Header({ breadcrumbs, menuItems }: { breadcrumbs: Breadcrumb[]; menuItems?: MenuItem[] }) {
   const [open, setOpen] = useState(false);
-  const [tokenModal, setTokenModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { choice, setChoice } = useTheme();
   const { t, locale, setLocale } = useI18n();
@@ -214,7 +135,7 @@ export function Header({ breadcrumbs, menuItems }: { breadcrumbs: Breadcrumb[]; 
               <button
                 onClick={() => {
                   setOpen(false);
-                  setTokenModal(true);
+                  navigate("token");
                 }}
                 className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2"
               >
@@ -240,7 +161,6 @@ export function Header({ breadcrumbs, menuItems }: { breadcrumbs: Breadcrumb[]; 
         </div>
       </nav>
 
-      {tokenModal && <TokenModal onClose={() => setTokenModal(false)} />}
     </>
   );
 }

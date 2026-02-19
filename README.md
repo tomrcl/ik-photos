@@ -86,10 +86,10 @@ You can configure the database connection in two ways:
 DATABASE_URL=postgresql://user:password@host:port/dbname
 ```
 
-**Option B** — Individual variables (useful for managed databases like alwaysdata):
+**Option B** — Individual variables (useful for managed databases):
 
 ```env
-DB_HOST=postgresql-ik-photos.alwaysdata.net
+DB_HOST=postgresql-ik-photos.example.com
 DB_PORT=5432
 DB_NAME=ik-photos_db
 DB_USERNAME=ik-photos

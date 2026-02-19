@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Readable } from 'stream';
 
@@ -48,7 +48,7 @@ export class KdriveService {
       const body = await res.text();
       this.logger.warn(`kDrive API error: ${res.status} ${url} - ${body}`);
       if (res.status === 401) {
-        throw new UnauthorizedException('Infomaniak token is invalid or expired');
+        throw new ForbiddenException('Infomaniak token is invalid or expired');
       }
     }
     return res;

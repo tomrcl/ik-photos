@@ -21,6 +21,9 @@ export default {
   // Errors
   "error.status": "Fehler {status}",
   "error.sessionExpired": "Sitzung abgelaufen",
+  "error.emailAlreadyRegistered": "E-Mail bereits registriert",
+  "error.invalidCredentials": "Ungültige E-Mail oder Passwort",
+  "error.tooManyRequests": "Zu viele Anfragen, bitte versuchen Sie es später erneut",
 
   // Header / Menu
   "theme.title": "Design",
@@ -44,6 +47,7 @@ export default {
   "drives.breadcrumb": "Meine Drives",
   "drives.select": "Drive auswählen",
   "drives.error": "Fehler beim Laden der Drives.",
+  "drives.tokenExpired": "Ihr Infomaniak-API-Token ist ungültig oder abgelaufen.",
   "drives.reconnect": "Neu verbinden",
   "drives.indexing": "Indexierung...",
   "drives.reindex": "Neu indexieren",

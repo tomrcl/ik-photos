@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import "./style.css";
-import { isLoggedIn, saveAccessToken, setLocalMode } from "./auth/token-store.ts";
+import { isLoggedIn, saveAccessToken, saveRefreshToken, setLocalMode, getRefreshToken } from "./auth/token-store.ts";
 import { navigate } from "./hooks/useHash.ts";
 import { App } from "./App.tsx";
 import { API_BASE } from "./config.ts";
@@ -28,19 +28,24 @@ async function boot() {
     // Backend not reachable, continue normally
   }
 
-  // If not logged in, try to recover session via refresh cookie
+  // If not logged in, try to recover session via refresh token
   if (!isLoggedIn()) {
     try {
-      const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (refreshRes.ok) {
-        const data = await refreshRes.json();
-        saveAccessToken(data.accessToken);
+      const refreshToken = getRefreshToken();
+      if (refreshToken) {
+        const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          saveAccessToken(data.accessToken);
+          saveRefreshToken(data.refreshToken);
+        }
       }
     } catch {
-      // No valid refresh cookie, continue to login
+      // No valid refresh token, continue to login
     }
   }
 

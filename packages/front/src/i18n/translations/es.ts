@@ -21,6 +21,9 @@ export default {
   // Errors
   "error.status": "Error {status}",
   "error.sessionExpired": "Sesión expirada",
+  "error.emailAlreadyRegistered": "El correo electrónico ya está registrado",
+  "error.invalidCredentials": "Correo electrónico o contraseña inválidos",
+  "error.tooManyRequests": "Demasiadas solicitudes, inténtelo de nuevo más tarde",
 
   // Header / Menu
   "theme.title": "Tema",
@@ -44,6 +47,7 @@ export default {
   "drives.breadcrumb": "Mis drives",
   "drives.select": "Seleccionar un drive",
   "drives.error": "Error al cargar los drives.",
+  "drives.tokenExpired": "Su token API de Infomaniak es inválido o ha expirado.",
   "drives.reconnect": "Reconectar",
   "drives.indexing": "Indexando...",
   "drives.reindex": "Reindexar",

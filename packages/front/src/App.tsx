@@ -3,6 +3,7 @@ import { useHash } from "./hooks/useHash.ts";
 import { useAuth } from "./hooks/useAuth.ts";
 import { LoginView } from "./views/LoginView.tsx";
 import { DrivePickerView } from "./views/DrivePickerView.tsx";
+import { TokenView } from "./views/TokenView.tsx";
 import { GalleryView } from "./views/GalleryView.tsx";
 import { LightboxView } from "./views/LightboxView.tsx";
 
@@ -22,6 +23,10 @@ function Router() {
 
   if (hash === "drives") {
     return <DrivePickerView />;
+  }
+
+  if (hash === "token" || hash === "token?expired") {
+    return <TokenView expired={hash === "token?expired"} />;
   }
 
   // Parse drive-related routes

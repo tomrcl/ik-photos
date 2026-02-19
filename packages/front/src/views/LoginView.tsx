@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { API_BASE } from "../config.ts";
-import { saveAccessToken, isLocalMode } from "../auth/token-store.ts";
+import { saveAccessToken, saveRefreshToken, isLocalMode } from "../auth/token-store.ts";
 import { navigate } from "../hooks/useHash.ts";
 import { notifyAuthChange } from "../hooks/useAuth.ts";
 import { useI18n } from "../i18n/useI18n.ts";
@@ -25,6 +25,18 @@ export function LoginView({ mode }: { mode: "login" | "register" }) {
   const [loading, setLoading] = useState(false);
 
   const localMode = isLocalMode();
+
+  const errorMap: Record<string, string> = {
+    "Email already registered": t("error.emailAlreadyRegistered"),
+    "Invalid credentials": t("error.invalidCredentials"),
+    "Too Many Requests": t("error.tooManyRequests"),
+    "ThrottlerException: Too Many Requests": t("error.tooManyRequests"),
+  };
+
+  function translateApiError(message: string | undefined, status: number): string {
+    if (message && errorMap[message]) return errorMap[message];
+    return t("error.status", { status });
+  }
 
   async function submit() {
     setError("");
@@ -59,17 +71,17 @@ export function LoginView({ mode }: { mode: "login" | "register" }) {
       const res = await fetch(`${API_BASE}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(body),
       });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.message ?? t("error.status", { status: res.status }));
+        throw new Error(translateApiError(data.message, res.status));
       }
 
       const data = await res.json();
       saveAccessToken(data.accessToken);
+      saveRefreshToken(data.refreshToken);
       notifyAuthChange();
       navigate("drives");
     } catch (err) {

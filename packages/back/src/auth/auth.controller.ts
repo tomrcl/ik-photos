@@ -1,7 +1,7 @@
-import { Controller, Post, Get, Put, Body, Req, Res, HttpCode, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Req, HttpCode, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { KdriveService } from '../kdrive/kdrive.service';
 import { Public } from './public.decorator';
@@ -19,11 +19,9 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async register(
     @Body() body: { email: string; password: string; infomaniakToken: string },
-    @Res({ passthrough: true }) res: Response,
   ) {
     const tokens = await this.auth.register(body.email, body.password, body.infomaniakToken);
-    this.setRefreshCookie(res, tokens.refreshToken);
-    return { accessToken: tokens.accessToken };
+    return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
   }
 
   @Public()
@@ -32,27 +30,22 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async login(
     @Body() body: { email: string; password: string },
-    @Res({ passthrough: true }) res: Response,
   ) {
     const tokens = await this.auth.login(body.email, body.password);
-    this.setRefreshCookie(res, tokens.refreshToken);
-    return { accessToken: tokens.accessToken };
+    return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
   }
 
   @Public()
   @Post('refresh')
   @HttpCode(200)
   async refresh(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
+    @Body() body: { refreshToken?: string },
   ) {
-    const refreshToken = req.cookies?.['refresh_token'];
-    if (!refreshToken) {
-      return res.status(401).json({ message: 'No refresh token' });
+    if (!body.refreshToken) {
+      throw new UnauthorizedException('No refresh token');
     }
-    const tokens = await this.auth.refresh(refreshToken);
-    this.setRefreshCookie(res, tokens.refreshToken);
-    return { accessToken: tokens.accessToken };
+    const tokens = await this.auth.refresh(body.refreshToken);
+    return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
   }
 
   @Public()
@@ -81,10 +74,10 @@ export class AuthController {
     }
   }
 
+  @Public()
   @Post('logout')
   @HttpCode(200)
-  logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('refresh_token');
+  logout() {
     return { message: 'Logged out' };
   }
 
@@ -105,13 +98,4 @@ export class AuthController {
     return { id: user.sub, email: user.email };
   }
 
-  private setRefreshCookie(res: Response, token: string) {
-    res.cookie('refresh_token', token, {
-      httpOnly: true,
-      sameSite: 'strict',
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/api/auth',
-    });
-  }
 }

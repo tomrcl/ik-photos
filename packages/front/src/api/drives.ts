@@ -1,5 +1,12 @@
 import { apiFetch } from "./client.ts";
 
+export class TokenExpiredError extends Error {
+  constructor() {
+    super("Infomaniak token expired");
+    this.name = "TokenExpiredError";
+  }
+}
+
 export interface Drive {
   id: string;
   kdriveId: number;
@@ -12,7 +19,10 @@ export interface Drive {
 
 export async function syncDrives(): Promise<Drive[]> {
   const res = await apiFetch("/drives?sync=true");
-  if (!res.ok) throw new Error(`Failed to list drives: ${res.status}`);
+  if (!res.ok) {
+    if (res.status === 403) throw new TokenExpiredError();
+    throw new Error(`Failed to list drives: ${res.status}`);
+  }
   const json = await res.json();
   return json.drives;
 }
