@@ -151,4 +151,24 @@ export class KdriveService {
       filename: match?.[1] || 'download',
     };
   }
+
+  async uploadFile(token: string, driveId: number, fileId: number, buffer: Buffer, contentType: string, lastModifiedAt?: number): Promise<void> {
+    let url = `${this.apiBase}/3/drive/${driveId}/upload?file_id=${fileId}&total_size=${buffer.length}`;
+    if (lastModifiedAt) {
+      url += `&last_modified_at=${lastModifiedAt}`;
+    }
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/octet-stream',
+      },
+      body: buffer,
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      this.logger.warn(`kDrive upload error: ${res.status} - ${body}`);
+      throw new Error(`Failed to upload file ${fileId}: ${res.status}`);
+    }
+  }
 }

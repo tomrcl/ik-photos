@@ -67,7 +67,15 @@ export default {
   "gallery.lastIndexed": "Indexado: {date}",
   "gallery.indexing": "Indexando...",
   "gallery.indexComplete": "Indexaci\u00f3n completa: {count} fotos",
-  "gallery.indexError": "Error de indexaci\u00f3n",
+  "gallery.indexError": "Error de indexación",
+  "gallery.reindexModal.title": "Reindexación",
+  "gallery.reindexModal.partial": "Parcial",
+  "gallery.reindexModal.partialDesc": "Buscar solo fotos nuevas",
+  "gallery.reindexModal.full": "Completa",
+  "gallery.reindexModal.fullDesc": "Eliminar el índice y empezar de nuevo",
+  "gallery.reindexModal.cancel": "Cancelar",
+  "gallery.reindexModal.fullConfirm": "Todos los datos de indexación serán eliminados. La indexación se reiniciará desde cero.",
+  "gallery.reindexModal.fullConfirmButton": "Reindexar todo",
 
   // Selection toolbar
   "selection.cancel": "Cancelar",
@@ -85,6 +93,7 @@ export default {
   // Lightbox
   "lightbox.close": "Cerrar",
   "lightbox.download": "Descargar",
+  "lightbox.rotate": "Rotar",
 
   // Format
   "format.sizeUnits": "B,KB,MB,GB,TB",

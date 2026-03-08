@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { previewUrl, streamUrl, thumbnailUrl, downloadPhoto, deletePhotos, type Photo, type MonthCount } from "../api/files.ts";
+import { previewUrl, streamUrl, thumbnailUrl, downloadPhoto, deletePhotos, rotatePhoto, type Photo, type MonthCount } from "../api/files.ts";
 import { formatDate } from "../utils/format.ts";
 import { useI18n } from "../i18n/useI18n.ts";
 import { ConfirmModal } from "../components/ConfirmModal.tsx";
@@ -15,7 +15,7 @@ export function LightboxView({
 }) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
-  const { getMonthPhotos, loadMonth } = useMonthPhotos(kdriveId);
+  const { getMonthPhotos, loadMonth, reset: resetMonthPhotos } = useMonthPhotos(kdriveId);
 
   // Build siblings from all cached month photos in order
   const siblings = useMemo(() => {
@@ -33,6 +33,8 @@ export function LightboxView({
   const [previewCached, setPreviewCached] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [rotating, setRotating] = useState(false);
+  const [cacheBuster, setCacheBuster] = useState(0);
 
   const currentIndex = siblings.findIndex((f) => f.id === currentId);
   const currentFile: Photo | undefined =
@@ -65,11 +67,13 @@ export function LightboxView({
     }
   }, [currentId, currentIndex, currentFile, queryClient, kdriveId, getMonthPhotos, loadMonth]);
 
+  const bustUrl = (url: string) => cacheBuster ? `${url}&_t=${cacheBuster}` : url;
+
   // Start with thumbnail, upgrade to preview (images only)
   useEffect(() => {
     if (isVideo) { setShowPreview(false); setPreviewCached(false); return; }
     const img = new Image();
-    img.src = previewUrl(kdriveId, currentId);
+    img.src = bustUrl(previewUrl(kdriveId, currentId));
     if (img.complete && img.naturalWidth > 0) {
       setPreviewCached(true);
       setShowPreview(true);
@@ -78,7 +82,7 @@ export function LightboxView({
       setShowPreview(false);
       img.onload = () => setShowPreview(true);
     }
-  }, [currentId, kdriveId, isVideo]);
+  }, [currentId, kdriveId, isVideo, cacheBuster]);
 
   // Preload previous and next previews once current preview is ready
   useEffect(() => {
@@ -110,12 +114,29 @@ export function LightboxView({
     [siblings, currentIndex, kdriveId],
   );
 
+  const handleRotate = async () => {
+    setRotating(true);
+    try {
+      await rotatePhoto(kdriveId, currentId);
+      const ts = Date.now();
+      setCacheBuster(ts);
+      // Store cache buster so gallery thumbnails also refresh
+      const busters = queryClient.getQueryData<Record<string, number>>(["cacheBusters"]) ?? {};
+      queryClient.setQueryData(["cacheBusters"], { ...busters, [currentId]: ts });
+      resetMonthPhotos();
+    } catch (e) {
+      console.error("Rotate failed", e);
+    } finally {
+      setRotating(false);
+    }
+  };
+
   const handleDelete = async () => {
     setDeleting(true);
     try {
       await deletePhotos(kdriveId, [currentId]);
-      await queryClient.invalidateQueries({ queryKey: ["monthCounts"] });
-      await queryClient.invalidateQueries({ queryKey: ["monthPhotos"] });
+      await queryClient.invalidateQueries({ queryKey: ["monthCounts", kdriveId] });
+      resetMonthPhotos();
       await queryClient.invalidateQueries({ queryKey: ["drives"] });
       setShowDeleteConfirm(false);
 
@@ -205,6 +226,22 @@ export function LightboxView({
               <line x1="14" y1="11" x2="14" y2="17" />
             </svg>
           </button>
+          {!isVideo && (
+            <button
+              className="text-white/80 hover:text-white cursor-pointer p-1 disabled:opacity-40"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRotate();
+              }}
+              disabled={rotating}
+              title={t("lightbox.rotate")}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.5 2v6h-6" />
+                <path d="M21.34 15.57a10 10 0 1 1-.57-8.38L21.5 8" />
+              </svg>
+            </button>
+          )}
           <button
             className="text-white/80 hover:text-white cursor-pointer p-1"
             onClick={(e) => {
@@ -245,8 +282,8 @@ export function LightboxView({
             {/* Thumbnail: only needed while preview is loading */}
             {!previewCached && (
               <img
-                key={`thumb-${currentId}`}
-                src={thumbnailUrl(kdriveId, currentId)}
+                key={`thumb-${currentId}-${cacheBuster}`}
+                src={bustUrl(thumbnailUrl(kdriveId, currentId))}
                 alt={currentFile?.name ?? ""}
                 className="object-contain absolute inset-0 w-full h-full"
               />
@@ -263,8 +300,8 @@ export function LightboxView({
             {/* Preview: instant if cached, fade-in otherwise */}
             {showPreview && (
               <img
-                key={`preview-${currentId}`}
-                src={previewUrl(kdriveId, currentId)}
+                key={`preview-${currentId}-${cacheBuster}`}
+                src={bustUrl(previewUrl(kdriveId, currentId))}
                 alt={currentFile?.name ?? ""}
                 className={`object-contain absolute inset-0 w-full h-full${previewCached ? "" : " animate-fade-in"}`}
               />
@@ -295,6 +332,15 @@ export function LightboxView({
             ›
           </button>
         </>
+      )}
+
+      {rotating && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50">
+          <svg className="animate-spin h-10 w-10 text-white" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        </div>
       )}
 
       {showDeleteConfirm && (

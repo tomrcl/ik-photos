@@ -40,9 +40,13 @@ export class DrivesController {
     @Req() req: Request,
     @Param('kdriveId', ParseIntPipe) kdriveId: number,
     @Query('force') force?: string,
+    @Query('mode') mode?: string,
   ) {
     const accountId = (req as any).user.sub;
     const drive = await this.drives.findDrive(accountId, kdriveId);
+    if (mode === 'full') {
+      await this.drives.resetDrive(drive.id);
+    }
     // Set INDEXING synchronously so the front sees it immediately on refetch
     await this.drives.setIndexing(drive.id);
     this.indexation.indexDrive(accountId, drive.id, kdriveId, force === 'true');

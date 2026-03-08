@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { eq, and, asc } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
-import { account, drive } from '../db/schema';
+import { account, drive, photo } from '../db/schema';
 import { CryptoService } from '../crypto/crypto.service';
 import { KdriveService } from '../kdrive/kdrive.service';
 
@@ -94,5 +94,18 @@ export class DrivesService {
 
     if (!row) throw new NotFoundException('Drive not found');
     return row;
+  }
+
+  async resetDrive(driveId: string) {
+    await this.dbService.db.delete(photo).where(eq(photo.driveId, driveId));
+    await this.dbService.db
+      .update(drive)
+      .set({
+        totalPhotos: 0,
+        indexCursor: null,
+        minPhotoDate: null,
+        maxPhotoDate: null,
+      })
+      .where(eq(drive.id, driveId));
   }
 }

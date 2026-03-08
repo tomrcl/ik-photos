@@ -68,6 +68,14 @@ export default {
   "gallery.indexing": "Indexation en cours...",
   "gallery.indexComplete": "Indexation terminée : {count} photos",
   "gallery.indexError": "Erreur d'indexation",
+  "gallery.reindexModal.title": "Re-indexation",
+  "gallery.reindexModal.partial": "Partiel",
+  "gallery.reindexModal.partialDesc": "Chercher uniquement les nouvelles photos",
+  "gallery.reindexModal.full": "Complet",
+  "gallery.reindexModal.fullDesc": "Supprimer l'index et tout recommencer",
+  "gallery.reindexModal.cancel": "Annuler",
+  "gallery.reindexModal.fullConfirm": "Toutes les données d'indexation seront supprimées. L'indexation reprendra depuis zéro.",
+  "gallery.reindexModal.fullConfirmButton": "Tout ré-indexer",
 
   // Selection toolbar
   "selection.cancel": "Annuler",
@@ -85,6 +93,7 @@ export default {
   // Lightbox
   "lightbox.close": "Fermer",
   "lightbox.download": "Télécharger",
+  "lightbox.rotate": "Pivoter",
 
   // Format
   "format.sizeUnits": "o,Ko,Mo,Go,To",

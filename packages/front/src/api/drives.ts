@@ -34,8 +34,12 @@ export async function listDrives(): Promise<Drive[]> {
   return json.drives;
 }
 
-export async function startIndexation(kdriveId: number, force = false): Promise<void> {
-  const url = `/drives/${kdriveId}/index${force ? "?force=true" : ""}`;
+export async function startIndexation(kdriveId: number, force = false, mode?: "partial" | "full"): Promise<void> {
+  const params = new URLSearchParams();
+  if (force) params.set("force", "true");
+  if (mode === "full") params.set("mode", "full");
+  const qs = params.toString();
+  const url = `/drives/${kdriveId}/index${qs ? `?${qs}` : ""}`;
   const res = await apiFetch(url, { method: "POST" });
   if (!res.ok) throw new Error(`Failed to start indexation: ${res.status}`);
 }

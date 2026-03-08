@@ -12,6 +12,7 @@ import { startIndexation, getDriveStatus } from "../api/drives.ts";
 import { navigate } from "../hooks/useHash.ts";
 import { usePhotoSelection } from "../hooks/usePhotoSelection.ts";
 import { SelectionToolbar } from "../components/SelectionToolbar.tsx";
+import { ReindexModal } from "../components/ReindexModal.tsx";
 import { useI18n } from "../i18n/useI18n.ts";
 import { bcp47 } from "../i18n/translations/index.ts";
 
@@ -184,6 +185,7 @@ export function GalleryView({ kdriveId, initialPos }: { kdriveId: number; initia
   const [visibleMonth, setVisibleMonth] = useState<number | null>(initialPos?.month ?? null);
   const [toast, setToast] = useState<ToastData | null>(null);
   const [polling, setPolling] = useState(false);
+  const [showReindexModal, setShowReindexModal] = useState(false);
 
   // Poll drive status while indexing
   const { data: driveStatus } = useQuery({
@@ -209,12 +211,14 @@ export function GalleryView({ kdriveId, initialPos }: { kdriveId: number; initia
   }, [polling, driveStatus, t, queryClient, resetMonthPhotos]);
 
   const reindex = useMutation({
-    mutationFn: () => startIndexation(kdriveId, true),
+    mutationFn: (mode: "partial" | "full") => startIndexation(kdriveId, true, mode),
     onSuccess: () => {
+      setShowReindexModal(false);
       setToast({ message: t("gallery.indexing"), type: "info" });
       setPolling(true);
     },
     onError: () => {
+      setShowReindexModal(false);
       setToast({ message: t("gallery.indexError"), type: "error" });
     },
   });
@@ -368,7 +372,7 @@ export function GalleryView({ kdriveId, initialPos }: { kdriveId: number; initia
           {
             label: reindex.isLoading || polling ? t("drives.indexing") : t("gallery.reindex"),
             icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" /></svg>,
-            onClick: () => reindex.mutate(),
+            onClick: () => setShowReindexModal(true),
             disabled: reindex.isLoading || polling,
           },
         ]}
@@ -478,6 +482,14 @@ export function GalleryView({ kdriveId, initialPos }: { kdriveId: number; initia
           selectedIds={selectedIds}
           onClear={clearSelection}
           onDelete={handleDelete}
+        />
+      )}
+
+      {showReindexModal && (
+        <ReindexModal
+          onPartial={() => reindex.mutate("partial")}
+          onFull={() => reindex.mutate("full")}
+          onCancel={() => setShowReindexModal(false)}
         />
       )}
 

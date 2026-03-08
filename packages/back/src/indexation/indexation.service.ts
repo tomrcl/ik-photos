@@ -3,7 +3,7 @@ import { eq, and, count, min, max, sql } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
 import { account, drive, photo } from '../db/schema';
 import { CryptoService } from '../crypto/crypto.service';
-import { KdriveService } from '../kdrive/kdrive.service';
+import { KdriveService, SearchPhotosResult } from '../kdrive/kdrive.service';
 import { RateLimiter } from './rate-limiter';
 
 @Injectable()
@@ -52,77 +52,141 @@ export class IndexationService {
         .where(eq(photo.driveId, driveId));
       const isReindex = photoCount > 0;
 
-      let cursor: string | undefined;
-      let newPhotos = 0;
-      let unchangedInBatch = 0;
+      // Pre-load existing photos into a Map for fast lookup during re-index
+      let existingPhotos: Map<number, number> | undefined;
+      if (isReindex) {
+        const rows = await this.dbService.db
+          .select({ kdriveFileId: photo.kdriveFileId, lastModifiedAt: photo.lastModifiedAt })
+          .from(photo)
+          .where(eq(photo.driveId, driveId));
+        existingPhotos = new Map(rows.map((r) => [r.kdriveFileId, r.lastModifiedAt.getTime()]));
+        this.logger.log(`Drive ${kdriveId}: pre-loaded ${existingPhotos.size} existing photos for re-index`);
+      }
 
-      // API returns newest photos first (order_by=last_modified_at desc)
-      // On re-index: stop when we hit a full batch of already-known unchanged photos
-      while (true) {
-        await this.rateLimiter.acquire(accountId);
-        const result = await this.kdrive.searchPhotos(token, kdriveId, cursor, 1000);
+      // Resume from saved cursor if available
+      const [driveRow] = await this.dbService.db
+        .select({ indexCursor: drive.indexCursor })
+        .from(drive)
+        .where(eq(drive.id, driveId))
+        .limit(1);
+
+      let cursor: string | undefined = driveRow?.indexCursor ?? undefined;
+      let currentCursor: string | undefined = cursor;
+      let newPhotos = 0;
+      if (cursor) {
+        newPhotos = photoCount;
+        this.logger.log(`Drive ${kdriveId}: resuming from saved cursor (${photoCount} photos already indexed)`);
+      }
+
+      // Pipeline: fetch next batch while processing current one
+      let pendingFetch: Promise<SearchPhotosResult> | null = null;
+
+      // Kick off first fetch
+      await this.rateLimiter.acquire(accountId);
+      pendingFetch = this.kdrive.searchPhotos(token, kdriveId, cursor, 1000);
+
+      while (pendingFetch) {
+        // Await the pre-fetched batch
+        const result: SearchPhotosResult = await pendingFetch;
+        pendingFetch = null;
 
         if (result.files.length === 0) break;
 
-        unchangedInBatch = 0;
+        // Start fetching next batch in parallel with DB processing
+        const hasNextPage = !!result.cursor;
+        if (hasNextPage) {
+          const nextCursor = result.cursor!;
+          pendingFetch = this.rateLimiter
+            .acquire(accountId)
+            .then(() => this.kdrive.searchPhotos(token, kdriveId, nextCursor, 1000));
+        }
+
+        // Filter and collect files to upsert
+        const toUpsert: {
+          driveId: string;
+          kdriveFileId: number;
+          name: string;
+          extension: string;
+          size: bigint;
+          path: string;
+          lastModifiedAt: Date;
+          hasThumbnail: boolean;
+          mediaType: string;
+        }[] = [];
+
+        let unchangedInBatch = 0;
 
         for (const file of result.files) {
-          const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
           const lastModified = new Date(file.last_modified_at * 1000);
-          const filePath = file.path ?? '';
-          const hasThumbnail = file.has_thumbnail ?? true;
-          const mediaType = file.extension_type === 'video' ? 'video' : 'image';
 
-          // Check if photo already exists with same date
-          if (isReindex) {
-            const [existing] = await this.dbService.db
-              .select({ lastModifiedAt: photo.lastModifiedAt })
-              .from(photo)
-              .where(and(eq(photo.driveId, driveId), eq(photo.kdriveFileId, file.id)))
-              .limit(1);
-
-            if (existing && existing.lastModifiedAt.getTime() === lastModified.getTime()) {
+          // Check if photo already exists with same date (in-memory lookup)
+          if (existingPhotos) {
+            const existingTs = existingPhotos.get(file.id);
+            if (existingTs !== undefined && existingTs === lastModified.getTime()) {
               unchangedInBatch++;
-              continue; // skip — already up to date
+              continue;
             }
           }
 
-          await this.dbService.db
-            .insert(photo)
-            .values({
-              driveId,
-              kdriveFileId: file.id,
-              name: file.name,
-              extension: ext,
-              size: BigInt(file.size),
-              path: filePath,
-              lastModifiedAt: lastModified,
-              hasThumbnail,
-              mediaType,
-            })
-            .onConflictDoUpdate({
-              target: [photo.driveId, photo.kdriveFileId],
-              set: {
-                name: file.name,
-                size: BigInt(file.size),
-                path: filePath,
-                lastModifiedAt: lastModified,
-                hasThumbnail,
-                mediaType,
-              },
-            });
-
-          newPhotos++;
+          const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+          toUpsert.push({
+            driveId,
+            kdriveFileId: file.id,
+            name: file.name,
+            extension: ext,
+            size: BigInt(file.size),
+            path: file.path ?? '',
+            lastModifiedAt: lastModified,
+            hasThumbnail: file.has_thumbnail ?? true,
+            mediaType: file.extension_type === 'video' ? 'video' : 'image',
+          });
         }
 
-        // Update progress in DB so the front can poll it
+        // Save current cursor BEFORE upsert — if crash after this, we replay this batch (idempotent)
         await this.dbService.db
           .update(drive)
-          .set({ totalPhotos: newPhotos })
+          .set({ indexCursor: currentCursor ?? null })
+          .where(eq(drive.id, driveId));
+
+        // Bulk upsert in chunks of 500
+        if (toUpsert.length > 0) {
+          const CHUNK_SIZE = 500;
+          for (let i = 0; i < toUpsert.length; i += CHUNK_SIZE) {
+            const chunk = toUpsert.slice(i, i + CHUNK_SIZE);
+            await this.dbService.db
+              .insert(photo)
+              .values(chunk)
+              .onConflictDoUpdate({
+                target: [photo.driveId, photo.kdriveFileId],
+                set: {
+                  name: sql`excluded."name"`,
+                  size: sql`excluded."size"`,
+                  path: sql`excluded."path"`,
+                  lastModifiedAt: sql`excluded."lastModifiedAt"`,
+                  hasThumbnail: sql`excluded."hasThumbnail"`,
+                  mediaType: sql`excluded."mediaType"`,
+                },
+              });
+          }
+
+          // Update the in-memory map with newly upserted photos
+          if (existingPhotos) {
+            for (const row of toUpsert) {
+              existingPhotos.set(row.kdriveFileId, row.lastModifiedAt.getTime());
+            }
+          }
+        }
+        newPhotos += toUpsert.length;
+
+        // Advance cursor and update progress + cursor in DB
+        currentCursor = result.cursor ?? undefined;
+        await this.dbService.db
+          .update(drive)
+          .set({ totalPhotos: newPhotos, indexCursor: currentCursor ?? null })
           .where(eq(drive.id, driveId));
 
         this.logger.log(
-          `Drive ${kdriveId}: batch ${result.files.length} files — ${newPhotos} new/updated, ${unchangedInBatch} unchanged`,
+          `Drive ${kdriveId}: batch ${result.files.length} files — ${toUpsert.length} new/updated, ${unchangedInBatch} unchanged`,
         );
 
         // On re-index: if entire batch was unchanged, we've caught up
@@ -131,8 +195,7 @@ export class IndexationService {
           break;
         }
 
-        if (!result.cursor) break;
-        cursor = result.cursor;
+        if (!hasNextPage) break;
       }
 
       // Recount total from DB (accurate even after incremental)
@@ -154,6 +217,7 @@ export class IndexationService {
         .set({
           indexStatus: 'COMPLETE',
           lastIndexedAt: new Date(),
+          indexCursor: null,
           totalPhotos,
           minPhotoDate: dateRange.minDate,
           maxPhotoDate: dateRange.maxDate,

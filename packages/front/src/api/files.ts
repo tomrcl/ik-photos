@@ -123,6 +123,13 @@ export async function downloadPhotosZip(kdriveId: number, photoIds: string[]): P
   URL.revokeObjectURL(url);
 }
 
+export async function rotatePhoto(kdriveId: number, photoId: string): Promise<void> {
+  const res = await apiFetch(`/drives/${kdriveId}/photos/${photoId}/rotate`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error(`Rotate failed: ${res.status}`);
+}
+
 export async function deletePhotos(kdriveId: number, photoIds: string[]): Promise<void> {
   const res = await apiFetch(`/drives/${kdriveId}/photos`, {
     method: "DELETE",

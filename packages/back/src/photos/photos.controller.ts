@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import { eq } from 'drizzle-orm';
 import { count } from 'drizzle-orm';
 import archiver from 'archiver';
+import sharp from 'sharp';
 import { PhotosService } from './photos.service';
 import { DrivesService } from '../drives/drives.service';
 import { KdriveService } from '../kdrive/kdrive.service';
@@ -191,6 +192,36 @@ export class PhotosController {
       res.setHeader('Content-Type', contentType);
       res.send(buffer);
     }
+  }
+
+  @Post(':id/rotate')
+  async rotatePhoto(
+    @Req() req: Request,
+    @Param('kdriveId', ParseIntPipe) kdriveId: number,
+    @Param('id') photoId: string,
+  ) {
+    const accountId = (req as any).user.sub;
+    const driveRow = await this.drives.findDrive(accountId, kdriveId);
+    const foundPhoto = await this.photos.findPhoto(driveRow.id, photoId);
+
+    const token = await this.drives.getDecryptedToken(accountId);
+    await this.rateLimiter.acquire(accountId);
+    const fileInfo = await this.kdrive.getFileInfo(token, kdriveId, foundPhoto.kdriveFileId);
+    const { buffer, contentType } = await this.kdrive.fetchDownload(token, kdriveId, foundPhoto.kdriveFileId);
+
+    const meta = await sharp(buffer).metadata();
+    let pipeline = sharp(buffer).rotate(90).withMetadata();
+    if (meta.format === 'jpeg') {
+      pipeline = pipeline.jpeg({ quality: 100 });
+    } else if (meta.format === 'png') {
+      pipeline = pipeline.png();
+    } else if (meta.format === 'webp') {
+      pipeline = pipeline.webp({ quality: 100 });
+    }
+    const rotated = await pipeline.toBuffer();
+    await this.kdrive.uploadFile(token, kdriveId, foundPhoto.kdriveFileId, rotated, contentType, fileInfo.last_modified_at);
+
+    return { ok: true };
   }
 
   @Delete()

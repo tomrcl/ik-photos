@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useCallback, type MouseEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { thumbnailUrl } from "../api/files.ts";
 
 interface PhotoCardProps {
@@ -26,6 +27,11 @@ export function PhotoCard({
   selectionActive,
   onSelect,
 }: PhotoCardProps) {
+  const queryClient = useQueryClient();
+  const cacheBusters = queryClient.getQueryData<Record<string, number>>(["cacheBusters"]) ?? {};
+  const buster = cacheBusters[photoId];
+  const thumbUrl = buster ? `${thumbnailUrl(kdriveId, photoId)}&_t=${buster}` : thumbnailUrl(kdriveId, photoId);
+
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -139,7 +145,7 @@ export function PhotoCard({
       {visible && (
         <img
           key={retryCount}
-          src={thumbnailUrl(kdriveId, photoId)}
+          src={thumbUrl}
           alt={fileName}
           draggable={false}
           onLoad={handleImgLoad}

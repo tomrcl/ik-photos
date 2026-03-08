@@ -10,7 +10,7 @@ export class DbService implements OnModuleDestroy {
   public db: NodePgDatabase<typeof schema & typeof relations>;
 
   constructor() {
-    this.pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
+    this.pool = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
     this.db = drizzle(this.pool, { schema: { ...schema, ...relations } });
   }
 
