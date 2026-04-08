@@ -4,14 +4,24 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      deploy_back:
+        description: 'Deploy backend + DB migrations'
+        type: boolean
+        default: true
+      deploy_front:
+        description: 'Deploy frontend'
+        type: boolean
+        default: true
 
 jobs:
   detect:
     name: Detect changes
     runs-on: ubuntu-latest
     outputs:
-      front: ${{ steps.changes.outputs.front }}
-      back: ${{ steps.changes.outputs.back }}
+      front: ${{ steps.result.outputs.front }}
+      back: ${{ steps.result.outputs.back }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -19,6 +29,7 @@ jobs:
 
       - name: Detect changed packages
         id: changes
+        if: github.event_name == 'push'
         run: |
           PREV=$(git tag --sort=-v:refname | grep '^v' | sed -n '2p')
 
@@ -43,6 +54,17 @@ jobs:
             echo "back=true" >> "$GITHUB_OUTPUT"
           else
             echo "back=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set outputs
+        id: result
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "front=${{ inputs.deploy_front }}" >> "$GITHUB_OUTPUT"
+            echo "back=${{ inputs.deploy_back }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "front=${{ steps.changes.outputs.front || 'false' }}" >> "$GITHUB_OUTPUT"
+            echo "back=${{ steps.changes.outputs.back || 'false' }}" >> "$GITHUB_OUTPUT"
           fi
 
   deploy-back:
