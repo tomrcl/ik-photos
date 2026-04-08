@@ -17,20 +17,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get previous tag
-        id: prev_tag
-        run: |
-          PREV=$(git tag --sort=-v:refname | grep '^v' | sed -n '2p')
-          if [ -z "$PREV" ]; then
-            echo "ref=HEAD~1" >> "$GITHUB_OUTPUT"
-          else
-            echo "ref=$PREV" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Detect changed packages
         id: changes
         run: |
-          DIFF=$(git diff --name-only "${{ steps.prev_tag.outputs.ref }}" HEAD)
+          PREV=$(git tag --sort=-v:refname | grep '^v' | sed -n '2p')
+
+          if [ -z "$PREV" ]; then
+            echo "First tag = baseline, nothing to deploy"
+            echo "front=false" >> "$GITHUB_OUTPUT"
+            echo "back=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Comparing $PREV → HEAD"
+          DIFF=$(git diff --name-only "$PREV" HEAD)
           echo "$DIFF"
 
           if echo "$DIFF" | grep -q '^packages/front/'; then
