@@ -45,41 +45,6 @@ jobs:
             echo "back=false" >> "$GITHUB_OUTPUT"
           fi
 
-  deploy-front:
-    name: Deploy Frontend
-    needs: detect
-    if: needs.detect.outputs.front == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Build frontend
-        run: pnpm --filter @ik-photos/front build
-        env:
-          VITE_API_BASE: ${{ vars.VITE_API_BASE }}
-
-      - name: Deploy to AlwaysData
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ssh-ik-photos.alwaysdata.net
-          username: ik-photos
-          key: ${{ secrets.ALWAYSDATA_SSH_KEY }}
-          password: ${{ secrets.ALWAYSDATA_PASSWORD }}
-          source: packages/front/dist/*
-          target: /home/ik-photos/www
-          strip_components: 3
-
   deploy-back:
     name: Deploy Backend + DB migrations
     needs: detect
@@ -89,8 +54,6 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
@@ -123,3 +86,39 @@ jobs:
             --regions fra
         env:
           KOYEB_TOKEN: ${{ secrets.KOYEB_TOKEN }}
+
+  deploy-front:
+    name: Deploy Frontend
+    needs: [detect, deploy-back]
+    if: |
+      always() &&
+      needs.detect.outputs.front == 'true' &&
+      (needs.deploy-back.result == 'success' || needs.deploy-back.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm --filter @ik-photos/front build
+        env:
+          VITE_API_BASE: ${{ vars.VITE_API_BASE }}
+
+      - name: Deploy to AlwaysData
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ssh-ik-photos.alwaysdata.net
+          username: ik-photos
+          key: ${{ secrets.ALWAYSDATA_SSH_KEY }}
+          password: ${{ secrets.ALWAYSDATA_PASSWORD }}
+          source: packages/front/dist/*
+          target: /home/ik-photos/www
+          strip_components: 3
