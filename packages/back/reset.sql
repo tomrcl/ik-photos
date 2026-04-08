@@ -1,4 +1,5 @@
 -- Reset database: drop all tables and recreate from scratch
+DROP TABLE IF EXISTS "Favorite" CASCADE;
 DROP TABLE IF EXISTS "Photo" CASCADE;
 DROP TABLE IF EXISTS "Drive" CASCADE;
 DROP TABLE IF EXISTS "Account" CASCADE;
@@ -52,3 +53,14 @@ CREATE TABLE "Photo" (
 CREATE UNIQUE INDEX "Photo_driveId_kdriveFileId_key" ON "Photo"("driveId", "kdriveFileId");
 CREATE INDEX "Photo_driveId_lastModifiedAt_idx" ON "Photo"("driveId", "lastModifiedAt");
 CREATE INDEX "Photo_lastModifiedAt_idx" ON "Photo"("lastModifiedAt");
+
+-- Favorite
+CREATE TABLE "Favorite" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "accountId" uuid NOT NULL REFERENCES "Account"("id") ON DELETE CASCADE,
+  "photoId" uuid NOT NULL REFERENCES "Photo"("id") ON DELETE CASCADE,
+  "createdAt" timestamp(3) NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX "Favorite_accountId_photoId_key" ON "Favorite"("accountId", "photoId");
+CREATE INDEX "Favorite_accountId_idx" ON "Favorite"("accountId");

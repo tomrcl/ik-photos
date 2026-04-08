@@ -5,7 +5,7 @@
   "version": "0.0.0",
   "scripts": {
     "build": "nest build",
-    "build:bundle": "rm -rf dist tsconfig.tsbuildinfo bundle && nest build && ncc build dist/main.js -o bundle -m",
+    "build:bundle": "rm -rf dist tsconfig.tsbuildinfo bundle && nest build && ncc build dist/main.js -o bundle -m -e sharp",
     "dev": "nest start --watch",
     "start": "node dist/main.js",
     "lint": "tsc --noEmit",

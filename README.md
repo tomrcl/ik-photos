@@ -231,6 +231,87 @@ Configure your server with:
 
 Since both live on the same domain, the frontend calls `/api/...` as a relative path and no cross-origin issues arise.
 
+## Deployment (CI/CD)
+
+Deployment is automated via GitHub Actions. A single workflow (`.github/workflows/deploy.yml`) triggers on any `v*` tag and **auto-detects** which packages changed since the previous tag:
+
+- If `packages/front/` changed → deploys the **frontend** to AlwaysData
+- If `packages/back/` or `packages/shared/` changed → runs **DB migrations** on Neon, then deploys the **backend** to Koyeb
+
+### Usage
+
+```bash
+git tag v1.2.0
+git push --tags
+```
+
+If both front and back changed, both deploy jobs run in parallel.
+
+### Required GitHub configuration
+
+#### Secrets (`Settings > Secrets and variables > Actions > Secrets`)
+
+| Secret | Description |
+|--------|-------------|
+| `ALWAYSDATA_SSH_KEY` **or** `ALWAYSDATA_PASSWORD` | Authentication for `ik-photos@ssh-ik-photos.alwaysdata.net`. Use **one** of the two (key recommended, password works too). |
+| `DATABASE_URL` | Neon PostgreSQL connection string (e.g. `postgresql://user:pass@ep-xxx.eu-central-1.aws.neon.tech/ikphotos?sslmode=require`). Used for running Drizzle migrations. |
+| `KOYEB_TOKEN` | Koyeb API token. Generate one at https://app.koyeb.com/settings/api. |
+
+> **AlwaysData SSH setup** : tu peux utiliser directement ton mot de passe AlwaysData (`ALWAYSDATA_PASSWORD`).
+> Pour passer aux clés SSH (recommandé) :
+> ```bash
+> ssh-keygen -t ed25519 -f /tmp/alwaysdata_ci -N ""
+> ssh-copy-id -i /tmp/alwaysdata_ci.pub ik-photos@ssh-ik-photos.alwaysdata.net
+> # Copier le contenu de /tmp/alwaysdata_ci dans le secret ALWAYSDATA_SSH_KEY sur GitHub
+> # Puis supprimer les fichiers locaux
+> ```
+
+#### Variables (`Settings > Secrets and variables > Actions > Variables`)
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_API_BASE` | API base URL baked into the frontend build (e.g. `https://ik-photos-api.koyeb.app/api`). |
+
+### Infrastructure
+
+| Component | Provider | Details |
+|-----------|----------|---------|
+| Frontend | [AlwaysData](https://www.alwaysdata.com/) | Static files served via SCP upload to `/home/ik-photos/www` |
+| Backend | [Koyeb](https://www.koyeb.com/) | Docker container from bundled `index.js` (free tier, `fra` region) |
+| Database | [Neon](https://neon.tech/) | Serverless PostgreSQL, migrations via `drizzle-kit migrate` |
+
+### Backend environment variables on Koyeb
+
+These must be configured in the Koyeb dashboard (or via `koyeb service update`):
+
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Neon connection string |
+| `JWT_SECRET` | Random 64+ character secret |
+| `ENCRYPTION_KEY` | Random 32-byte hex key (`openssl rand -hex 32`) |
+| `CORS_ORIGIN` | `https://ik-photos.alwaysdata.net` |
+
+### Manual deployment
+
+If you prefer to deploy manually without tags:
+
+```bash
+# Frontend
+pnpm --filter @ik-photos/front build
+scp -r packages/front/dist/* ik-photos@ssh-ik-photos.alwaysdata.net:/home/ik-photos/www
+
+# Backend
+pnpm --filter @ik-photos/back run build:bundle
+koyeb deploy ./packages/back/bundle ik-photos/api \
+  --archive-builder docker \
+  --instance-type free \
+  --ports 3004:http \
+  --regions fra
+
+# DB migrations
+cd packages/back && npx drizzle-kit migrate
+```
+
 ## Lint
 
 ```bash

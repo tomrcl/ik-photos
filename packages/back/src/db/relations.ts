@@ -1,8 +1,9 @@
 import { relations } from 'drizzle-orm';
-import { account, drive, photo } from './schema';
+import { account, drive, photo, favorite } from './schema';
 
 export const accountRelations = relations(account, ({ many }) => ({
   drives: many(drive),
+  favorites: many(favorite),
 }));
 
 export const driveRelations = relations(drive, ({ one, many }) => ({
@@ -10,6 +11,12 @@ export const driveRelations = relations(drive, ({ one, many }) => ({
   photos: many(photo),
 }));
 
-export const photoRelations = relations(photo, ({ one }) => ({
+export const photoRelations = relations(photo, ({ one, many }) => ({
   drive: one(drive, { fields: [photo.driveId], references: [drive.id] }),
+  favorites: many(favorite),
+}));
+
+export const favoriteRelations = relations(favorite, ({ one }) => ({
+  account: one(account, { fields: [favorite.accountId], references: [account.id] }),
+  photo: one(photo, { fields: [favorite.photoId], references: [photo.id] }),
 }));

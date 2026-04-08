@@ -10,6 +10,7 @@ import { KdriveModule } from './kdrive/kdrive.module';
 import { DrivesModule } from './drives/drives.module';
 import { PhotosModule } from './photos/photos.module';
 import { IndexationModule } from './indexation/indexation.module';
+import { FavoritesModule } from './favorites/favorites.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { IndexationModule } from './indexation/indexation.module';
     DrivesModule,
     PhotosModule,
     IndexationModule,
+    FavoritesModule,
   ],
 })
 export class AppModule {}

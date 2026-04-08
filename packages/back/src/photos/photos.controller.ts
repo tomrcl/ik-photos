@@ -161,37 +161,43 @@ export class PhotosController {
 
     const token = await this.drives.getDecryptedToken(accountId);
     await this.rateLimiter.acquire(accountId);
+
+    const range = req.headers.range;
+
+    // Without Range header: stream directly without buffering
+    if (!range) {
+      const { stream, filename } = await this.kdrive.fetchDownloadStream(token, kdriveId, foundPhoto.kdriveFileId);
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Accept-Ranges', 'bytes');
+      stream.pipe(res);
+      return;
+    }
+
+    // With Range header: kDrive API doesn't support Range requests,
+    // so we must buffer the full file to serve partial content.
+    // This is a known limitation — only impacts videos (images use /preview).
     const { buffer, contentType } = await this.kdrive.fetchDownload(token, kdriveId, foundPhoto.kdriveFileId);
 
     const total = buffer.length;
-    const range = req.headers.range;
-
-    if (range) {
-      const match = range.match(/bytes=(\d+)-(\d*)/);
-      if (!match) {
-        res.status(416).setHeader('Content-Range', `bytes */${total}`).end();
-        return;
-      }
-      const start = parseInt(match[1], 10);
-      const end = match[2] ? parseInt(match[2], 10) : total - 1;
-
-      if (start >= total || end >= total) {
-        res.status(416).setHeader('Content-Range', `bytes */${total}`).end();
-        return;
-      }
-
-      res.status(206);
-      res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
-      res.setHeader('Accept-Ranges', 'bytes');
-      res.setHeader('Content-Length', end - start + 1);
-      res.setHeader('Content-Type', contentType);
-      res.send(buffer.subarray(start, end + 1));
-    } else {
-      res.setHeader('Accept-Ranges', 'bytes');
-      res.setHeader('Content-Length', total);
-      res.setHeader('Content-Type', contentType);
-      res.send(buffer);
+    const match = range.match(/bytes=(\d+)-(\d*)/);
+    if (!match) {
+      res.status(416).setHeader('Content-Range', `bytes */${total}`).end();
+      return;
     }
+    const start = parseInt(match[1], 10);
+    const end = match[2] ? parseInt(match[2], 10) : total - 1;
+
+    if (start >= total || end >= total) {
+      res.status(416).setHeader('Content-Range', `bytes */${total}`).end();
+      return;
+    }
+
+    res.status(206);
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Content-Length', end - start + 1);
+    res.setHeader('Content-Type', contentType);
+    res.send(buffer.subarray(start, end + 1));
   }
 
   @Post(':id/rotate')

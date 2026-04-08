@@ -6,6 +6,7 @@ import { DrivePickerView } from "./views/DrivePickerView.tsx";
 import { TokenView } from "./views/TokenView.tsx";
 import { GalleryView } from "./views/GalleryView.tsx";
 import { LightboxView } from "./views/LightboxView.tsx";
+import { FavoritesView } from "./views/FavoritesView.tsx";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,12 @@ function Router() {
 
   if (hash === "token" || hash === "token?expired") {
     return <TokenView expired={hash === "token?expired"} />;
+  }
+
+  // Favorites route
+  const favMatch = hash.match(/^drive\/(\d+)\/favorites$/);
+  if (favMatch) {
+    return <FavoritesView kdriveId={Number(favMatch[1])} />;
   }
 
   // Parse drive-related routes

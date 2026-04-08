@@ -82,6 +82,13 @@ async function bootstrap() {
 
   app.use(cookieParser());
   app.use(compression());
+  app.use((_req: any, res: any, next: any) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('X-XSS-Protection', '0'); // modern browsers: CSP is preferred
+    next();
+  });
   app.setGlobalPrefix('api');
   app.enableCors({
     origin: config.get<string>('CORS_ORIGIN', 'http://localhost:3003'),

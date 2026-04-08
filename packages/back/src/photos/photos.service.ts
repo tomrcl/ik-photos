@@ -140,7 +140,7 @@ export class PhotosService {
       .select()
       .from(photo)
       .innerJoin(drive, eq(photo.driveId, drive.id))
-      .where(eq(photo.id, photoId))
+      .where(and(eq(photo.id, photoId), eq(photo.driveId, driveId)))
       .limit(1);
 
     if (rows.length === 0) throw new NotFoundException('Photo not found');

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { previewUrl, streamUrl, thumbnailUrl, downloadPhoto, deletePhotos, rotatePhoto, type Photo, type MonthCount } from "../api/files.ts";
+import { toggleFavorite as apiToggleFavorite } from "../api/favorites.ts";
 import { formatDate } from "../utils/format.ts";
 import { useI18n } from "../i18n/useI18n.ts";
 import { ConfirmModal } from "../components/ConfirmModal.tsx";
@@ -35,12 +36,21 @@ export function LightboxView({
   const [deleting, setDeleting] = useState(false);
   const [rotating, setRotating] = useState(false);
   const [cacheBuster, setCacheBuster] = useState(0);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   const currentIndex = siblings.findIndex((f) => f.id === currentId);
   const currentFile: Photo | undefined =
     currentIndex >= 0 ? siblings[currentIndex] : undefined;
 
   const isVideo = currentFile?.mediaType === "video";
+
+  // Check favorite status
+  useEffect(() => {
+    const favs = queryClient.getQueryData<Set<string>>(["favorites", kdriveId]);
+    if (favs) {
+      setIsFavorite(favs.has(currentId));
+    }
+  }, [currentId, kdriveId, queryClient]);
 
   // Prefetch adjacent months when approaching edges
   useEffect(() => {
@@ -109,6 +119,9 @@ export function LightboxView({
         (currentIndex + delta + siblings.length) % siblings.length;
       const file = siblings[newIndex];
       setCurrentId(file.id);
+      // Reset zoom when changing photo
+      setZoomScale(1);
+      setZoomTranslate({ x: 0, y: 0 });
       history.replaceState(null, "", `#drive/${kdriveId}/photo/${file.id}`);
     },
     [siblings, currentIndex, kdriveId],
@@ -128,6 +141,24 @@ export function LightboxView({
       console.error("Rotate failed", e);
     } finally {
       setRotating(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    try {
+      const result = await apiToggleFavorite(kdriveId, currentId);
+      setIsFavorite(result.favorited);
+      // Update cache
+      const favs = queryClient.getQueryData<Set<string>>(["favorites", kdriveId]) ?? new Set();
+      const next = new Set(favs);
+      if (result.favorited) {
+        next.add(currentId);
+      } else {
+        next.delete(currentId);
+      }
+      queryClient.setQueryData(["favorites", kdriveId], next);
+    } catch (e) {
+      console.error("Toggle favorite failed", e);
     }
   };
 
@@ -171,45 +202,148 @@ export function LightboxView({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [goBack, navigatePhoto, showDeleteConfirm]);
 
-  // Touch swipe for mobile navigation
+  // --- Pinch zoom + swipe ---
+  const [zoomScale, setZoomScale] = useState(1);
+  const [zoomTranslate, setZoomTranslate] = useState({ x: 0, y: 0 });
+  const [isPinching, setIsPinching] = useState(false);
+  const imgContainerRef = useRef<HTMLDivElement>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const pinchStartDist = useRef<number | null>(null);
+  const pinchStartScale = useRef(1);
+  const panStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  }, []);
+    if (e.touches.length === 2) {
+      // Pinch start
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      pinchStartDist.current = Math.hypot(dx, dy);
+      pinchStartScale.current = zoomScale;
+      setIsPinching(true);
+      touchStart.current = null;
+    } else if (e.touches.length === 1) {
+      if (zoomScale > 1) {
+        // Pan start when zoomed
+        panStart.current = {
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+          tx: zoomTranslate.x,
+          ty: zoomTranslate.y,
+        };
+        touchStart.current = null;
+      } else {
+        // Swipe start
+        touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        panStart.current = null;
+      }
+    }
+  }, [zoomScale, zoomTranslate]);
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchStartDist.current) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const newScale = Math.min(5, Math.max(1, pinchStartScale.current * (dist / pinchStartDist.current)));
+      setZoomScale(newScale);
+      if (newScale === 1) {
+        setZoomTranslate({ x: 0, y: 0 });
+      }
+    } else if (e.touches.length === 1 && panStart.current && zoomScale > 1) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - panStart.current.x;
+      const dy = e.touches[0].clientY - panStart.current.y;
+      setZoomTranslate({
+        x: panStart.current.tx + dx,
+        y: panStart.current.ty + dy,
+      });
+    }
+  }, [zoomScale]);
 
   const onTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (pinchStartDist.current && e.touches.length < 2) {
+      pinchStartDist.current = null;
+      setIsPinching(false);
+      // Snap to 1 if close
+      if (zoomScale < 1.1) {
+        setZoomScale(1);
+        setZoomTranslate({ x: 0, y: 0 });
+      }
+      return;
+    }
+
+    if (panStart.current) {
+      panStart.current = null;
+      return;
+    }
+
     if (!touchStart.current) return;
     const dx = e.changedTouches[0].clientX - touchStart.current.x;
     const dy = e.changedTouches[0].clientY - touchStart.current.y;
     touchStart.current = null;
-    // Only trigger if horizontal swipe is dominant and long enough
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    // Only trigger swipe if not zoomed and horizontal swipe is dominant and long enough
+    if (zoomScale <= 1 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
       navigatePhoto(dx > 0 ? -1 : 1);
     }
-  }, [navigatePhoto]);
+  }, [navigatePhoto, zoomScale]);
+
+  // Double-tap to toggle zoom
+  const lastTap = useRef(0);
+  const onDoubleTap = useCallback((e: React.TouchEvent) => {
+    const now = Date.now();
+    if (now - lastTap.current < 300) {
+      e.preventDefault();
+      if (zoomScale > 1) {
+        setZoomScale(1);
+        setZoomTranslate({ x: 0, y: 0 });
+      } else {
+        setZoomScale(2.5);
+      }
+    }
+    lastTap.current = now;
+  }, [zoomScale]);
+
+  // Note: zoom reset also happens in navigatePhoto() for swipe/arrow nav.
+  // This useEffect covers the case where currentId changes externally (e.g. initial load).
+  useEffect(() => {
+    setZoomScale(1);
+    setZoomTranslate({ x: 0, y: 0 });
+  }, [currentId]);
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center"
+      className="fixed inset-0 z-50 bg-black flex flex-col"
       onClick={(e) => {
         if (e.target === e.currentTarget) goBack();
       }}
     >
-      {/* Top bar */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent z-10">
+      {/* Top bar - always visible above zoom */}
+      <div className="relative z-10 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent shrink-0">
         <button
           onClick={goBack}
           className="text-white/80 hover:text-white text-sm cursor-pointer"
         >
           ✕ {t("lightbox.close")}
         </button>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           {currentFile && (
-            <span className="text-white/70 text-sm">
+            <span className="text-white/70 text-sm hidden sm:inline">
               {formatDate(currentFile.lastModifiedAt)}
             </span>
           )}
+          <button
+            className={`cursor-pointer p-1 ${isFavorite ? "text-yellow-400" : "text-white/80 hover:text-white"}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleFavorite();
+            }}
+            title={t("lightbox.favorite")}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+            </svg>
+          </button>
           <button
             className="text-white/80 hover:text-white cursor-pointer p-1"
             onClick={(e) => {
@@ -259,55 +393,69 @@ export function LightboxView({
         </div>
       </div>
 
-      {/* Image — thumbnail underneath, preview on top */}
+      {/* Image area — pinch zoom isolated here */}
       <div
+        ref={imgContainerRef}
         className="flex-1 flex items-center justify-center w-full overflow-hidden relative"
+        style={{ touchAction: "none" }}
         onClick={(e) => {
           if (e.target === e.currentTarget) goBack();
         }}
-        onTouchStart={onTouchStart}
+        onTouchStart={(e) => { onDoubleTap(e); onTouchStart(e); }}
+        onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        {isVideo ? (
-          <video
-            key={`video-${currentId}`}
-            src={streamUrl(kdriveId, currentId)}
-            poster={thumbnailUrl(kdriveId, currentId)}
-            controls
-            autoPlay
-            className="object-contain absolute inset-0 w-full h-full"
-          />
-        ) : (
-          <>
-            {/* Thumbnail: only needed while preview is loading */}
-            {!previewCached && (
-              <img
-                key={`thumb-${currentId}-${cacheBuster}`}
-                src={bustUrl(thumbnailUrl(kdriveId, currentId))}
-                alt={currentFile?.name ?? ""}
-                className="object-contain absolute inset-0 w-full h-full"
-              />
-            )}
-            {/* Loading spinner while preview loads */}
-            {!showPreview && (
-              <div className="absolute bottom-4 right-4 z-10">
-                <svg className="animate-spin h-5 w-5 text-white/70" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              </div>
-            )}
-            {/* Preview: instant if cached, fade-in otherwise */}
-            {showPreview && (
-              <img
-                key={`preview-${currentId}-${cacheBuster}`}
-                src={bustUrl(previewUrl(kdriveId, currentId))}
-                alt={currentFile?.name ?? ""}
-                className={`object-contain absolute inset-0 w-full h-full${previewCached ? "" : " animate-fade-in"}`}
-              />
-            )}
-          </>
-        )}
+        <div
+          className="w-full h-full flex items-center justify-center"
+          style={{
+            transform: `scale(${zoomScale}) translate(${zoomTranslate.x / zoomScale}px, ${zoomTranslate.y / zoomScale}px)`,
+            transformOrigin: "center center",
+            transition: isPinching ? "none" : "transform 0.15s ease-out",
+          }}
+        >
+          {isVideo ? (
+            <video
+              key={`video-${currentId}`}
+              src={streamUrl(kdriveId, currentId)}
+              poster={thumbnailUrl(kdriveId, currentId)}
+              controls
+              autoPlay
+              className="object-contain w-full h-full"
+            />
+          ) : (
+            <>
+              {/* Thumbnail: only needed while preview is loading */}
+              {!previewCached && (
+                <img
+                  key={`thumb-${currentId}-${cacheBuster}`}
+                  src={bustUrl(thumbnailUrl(kdriveId, currentId))}
+                  alt={currentFile?.name ?? ""}
+                  className="object-contain absolute inset-0 w-full h-full"
+                  draggable={false}
+                />
+              )}
+              {/* Loading spinner while preview loads */}
+              {!showPreview && (
+                <div className="absolute bottom-4 right-4 z-10">
+                  <svg className="animate-spin h-5 w-5 text-white/70" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                </div>
+              )}
+              {/* Preview: instant if cached, fade-in otherwise */}
+              {showPreview && (
+                <img
+                  key={`preview-${currentId}-${cacheBuster}`}
+                  src={bustUrl(previewUrl(kdriveId, currentId))}
+                  alt={currentFile?.name ?? ""}
+                  className={`object-contain absolute inset-0 w-full h-full${previewCached ? "" : " animate-fade-in"}`}
+                  draggable={false}
+                />
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Navigation arrows */}

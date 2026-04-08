@@ -83,6 +83,7 @@ export default {
   "selection.count_other": "{count} photos selected",
   "selection.download": "Download ({count})",
   "selection.delete": "Delete ({count})",
+  "selection.favorite": "Favorites",
 
   // Delete
   "delete.confirm": "Delete {count} photo(s)? This cannot be undone.",
@@ -94,6 +95,14 @@ export default {
   "lightbox.close": "Close",
   "lightbox.download": "Download",
   "lightbox.rotate": "Rotate",
+  "lightbox.favorite": "Favorite",
+
+  // Favorites
+  "favorites.title": "Favorites",
+  "favorites.empty": "No favorites yet",
+  "favorites.added": "Added to favorites",
+  "favorites.removed": "Removed from favorites",
+  "favorites.bulkAdded": "{count} photo(s) added to favorites",
 
   // Format
   "format.sizeUnits": "B,KB,MB,GB,TB",

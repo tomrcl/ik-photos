@@ -40,18 +40,25 @@ export class KdriveService {
     this.apiBase = this.config.get<string>('KDRIVE_API_BASE', 'https://api.kdrive.infomaniak.com');
   }
 
-  private async apiFetch(url: string, token: string): Promise<Response> {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) {
-      const body = await res.text();
-      this.logger.warn(`kDrive API error: ${res.status} ${url} - ${body}`);
-      if (res.status === 401) {
-        throw new ForbiddenException('Infomaniak token is invalid or expired');
+  private async apiFetch(url: string, token: string, timeoutMs = 30_000): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        this.logger.warn(`kDrive API error: ${res.status} ${url} - ${body}`);
+        if (res.status === 401) {
+          throw new ForbiddenException('Infomaniak token is invalid or expired');
+        }
       }
+      return res;
+    } finally {
+      clearTimeout(timer);
     }
-    return res;
   }
 
   async listDrives(token: string): Promise<KDriveDrive[]> {
@@ -117,7 +124,7 @@ export class KdriveService {
 
   async fetchDownloadStream(token: string, driveId: number, fileId: number): Promise<{ stream: Readable; filename: string }> {
     const url = `${this.apiBase}/2/drive/${driveId}/files/${fileId}/download`;
-    const res = await this.apiFetch(url, token);
+    const res = await this.apiFetch(url, token, 120_000);
     if (!res.ok) throw new Error(`Failed to download file: ${res.status}`);
     const disposition = res.headers.get('content-disposition') || '';
     const match = disposition.match(/filename="?([^";\n]+)"?/);
@@ -129,18 +136,25 @@ export class KdriveService {
 
   async deleteFile(token: string, driveId: number, fileId: number): Promise<void> {
     const url = `${this.apiBase}/2/drive/${driveId}/files/${fileId}`;
-    const res = await fetch(url, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok && res.status !== 404) {
-      throw new Error(`Failed to delete file ${fileId}: ${res.status}`);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30_000);
+    try {
+      const res = await fetch(url, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      });
+      if (!res.ok && res.status !== 404) {
+        throw new Error(`Failed to delete file ${fileId}: ${res.status}`);
+      }
+    } finally {
+      clearTimeout(timer);
     }
   }
 
   async fetchDownload(token: string, driveId: number, fileId: number): Promise<{ buffer: Buffer; contentType: string; filename: string }> {
     const url = `${this.apiBase}/2/drive/${driveId}/files/${fileId}/download`;
-    const res = await this.apiFetch(url, token);
+    const res = await this.apiFetch(url, token, 120_000);
     if (!res.ok) throw new Error(`Failed to download file: ${res.status}`);
     const arrayBuffer = await res.arrayBuffer();
     const disposition = res.headers.get('content-disposition') || '';
@@ -157,18 +171,25 @@ export class KdriveService {
     if (lastModifiedAt) {
       url += `&last_modified_at=${lastModifiedAt}`;
     }
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/octet-stream',
-      },
-      body: buffer,
-    });
-    if (!res.ok) {
-      const body = await res.text();
-      this.logger.warn(`kDrive upload error: ${res.status} - ${body}`);
-      throw new Error(`Failed to upload file ${fileId}: ${res.status}`);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 120_000);
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/octet-stream',
+        },
+        body: buffer,
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        this.logger.warn(`kDrive upload error: ${res.status} - ${body}`);
+        throw new Error(`Failed to upload file ${fileId}: ${res.status}`);
+      }
+    } finally {
+      clearTimeout(timer);
     }
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { syncDrives, listDrives, startIndexation, TokenExpiredError, type Drive } from "../api/drives.ts";
 import { logout } from "../api/client.ts";
@@ -89,6 +89,17 @@ export function DrivePickerView() {
       data?.some((d) => d.indexStatus === "INDEXING") ? 2000 : false,
   });
   const { data: drives, isLoading, isError } = query;
+
+  // Auto-redirect when there's only one drive and it's ready
+  const didRedirect = useRef(false);
+  useEffect(() => {
+    if (didRedirect.current || !drives) return;
+    const completeDrives = drives.filter((d) => d.indexStatus === "COMPLETE");
+    if (drives.length === 1 && completeDrives.length === 1) {
+      didRedirect.current = true;
+      navigate(`drive/${completeDrives[0].kdriveId}`);
+    }
+  }, [drives]);
 
   if (query.error instanceof TokenExpiredError) {
     navigate("token?expired");

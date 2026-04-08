@@ -72,3 +72,21 @@ export const photo = pgTable(
     index('Photo_lastModifiedAt_idx').on(t.lastModifiedAt),
   ],
 );
+
+export const favorite = pgTable(
+  'Favorite',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    accountId: uuid('accountId')
+      .notNull()
+      .references(() => account.id, { onDelete: 'cascade' }),
+    photoId: uuid('photoId')
+      .notNull()
+      .references(() => photo.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('createdAt', { mode: 'date', precision: 3 }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('Favorite_accountId_photoId_key').on(t.accountId, t.photoId),
+    index('Favorite_accountId_idx').on(t.accountId),
+  ],
+);

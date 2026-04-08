@@ -83,6 +83,7 @@ export default {
   "selection.count_other": "{count} fotos seleccionadas",
   "selection.download": "Descargar ({count})",
   "selection.delete": "Eliminar ({count})",
+  "selection.favorite": "Favoritos",
 
   // Delete
   "delete.confirm": "¿Eliminar {count} foto(s)? Esta acción es irreversible.",
@@ -94,6 +95,14 @@ export default {
   "lightbox.close": "Cerrar",
   "lightbox.download": "Descargar",
   "lightbox.rotate": "Rotar",
+  "lightbox.favorite": "Favorito",
+
+  // Favorites
+  "favorites.title": "Favoritos",
+  "favorites.empty": "Aún no hay favoritos",
+  "favorites.added": "Añadido a favoritos",
+  "favorites.removed": "Eliminado de favoritos",
+  "favorites.bulkAdded": "{count} foto(s) añadida(s) a favoritos",
 
   // Format
   "format.sizeUnits": "B,KB,MB,GB,TB",
