@@ -37,7 +37,7 @@ export function FavoritesView({ kdriveId }: { kdriveId: number }) {
   const cols = useColumns();
   const [toast, setToast] = useState<ToastData | null>(null);
 
-  const { data: photos, isLoading, isError } = useQuery({
+  const { data: photos, isPending, isError } = useQuery({
     queryKey: ["favoritePhotos", kdriveId],
     queryFn: async () => {
       const res = await apiFetch(`/drives/${kdriveId}/favorites/photos`);
@@ -109,10 +109,10 @@ export function FavoritesView({ kdriveId }: { kdriveId: number }) {
           {t("favorites.title")}{photos && photos.length > 0 && ` (${photos.length})`}
         </h3>
 
-        {isLoading && <Spinner />}
+        {isPending && <Spinner />}
         {isError && <p className="text-red-500 text-center mt-12">{t("gallery.error")}</p>}
 
-        {!isLoading && photos && photos.length === 0 && (
+        {!isPending && photos && photos.length === 0 && (
           <p className="text-gray-500 dark:text-gray-400 text-center mt-12">{t("favorites.empty")}</p>
         )}
 

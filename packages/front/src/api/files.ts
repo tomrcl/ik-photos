@@ -8,6 +8,21 @@ export interface Photo {
   lastModifiedAt: string;
   hasThumbnail: boolean;
   mediaType: "image" | "video";
+  // EXIF fields — null until extracted or if photo has no EXIF data
+  takenAt?: string | null;
+  width?: number | null;
+  height?: number | null;
+  cameraMake?: string | null;
+  cameraModel?: string | null;
+  lensModel?: string | null;
+  iso?: number | null;
+  focalLength?: number | null;
+  aperture?: number | null;
+  shutterSpeed?: string | null;
+  gpsLat?: number | null;
+  gpsLng?: number | null;
+  // Soft-delete marker — null while live, ISO string when in Corbeille
+  deletedAt?: string | null;
 }
 
 export interface PhotoDetail extends Photo {
@@ -70,6 +85,36 @@ export async function fetchMonths(kdriveId: number): Promise<MonthCount[]> {
   if (!res.ok) throw new Error(`Failed to fetch months: ${res.status}`);
   const json = await res.json();
   return json.months;
+}
+
+export interface GeoPhoto {
+  id: string;
+  lat: number;
+  lng: number;
+  takenAt: string | null;
+}
+
+export async function fetchGeoPhotos(kdriveId: number): Promise<GeoPhoto[]> {
+  const res = await apiFetch(`/drives/${kdriveId}/photos/geo`);
+  if (!res.ok) throw new Error(`Failed to fetch geo photos: ${res.status}`);
+  const json = await res.json();
+  return json.photos as GeoPhoto[];
+}
+
+export interface MemoryYear {
+  year: number;
+  yearsAgo: number;
+  photos: Photo[];
+}
+
+export interface MemoriesResult {
+  years: MemoryYear[];
+}
+
+export async function fetchMemories(kdriveId: number): Promise<MemoriesResult> {
+  const res = await apiFetch(`/drives/${kdriveId}/photos/memories`);
+  if (!res.ok) throw new Error(`Failed to fetch memories: ${res.status}`);
+  return res.json();
 }
 
 export async function fetchMonthPhotos(

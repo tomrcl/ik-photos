@@ -11,6 +11,7 @@ import { DrivesModule } from './drives/drives.module';
 import { PhotosModule } from './photos/photos.module';
 import { IndexationModule } from './indexation/indexation.module';
 import { FavoritesModule } from './favorites/favorites.module';
+import { ExifModule } from './exif/exif.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { FavoritesModule } from './favorites/favorites.module';
     PhotosModule,
     IndexationModule,
     FavoritesModule,
+    ExifModule,
   ],
 })
 export class AppModule {}

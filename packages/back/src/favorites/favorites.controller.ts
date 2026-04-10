@@ -1,10 +1,12 @@
-import { Controller, Get, Post, Delete, Body, Param, Req, ParseIntPipe, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Req, ParseIntPipe } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { FavoritesService } from './favorites.service';
 import { DrivesService } from '../drives/drives.service';
+import { BulkPhotoIdsDto } from '../photos/dto/photo-ids.dto';
 
-@SkipThrottle()
+// Selective SkipThrottle: only the read endpoints bypass the rate limiter.
+// Toggle / bulk add / bulk remove are mutations and stay rate-limited.
 @Controller('drives/:kdriveId/favorites')
 export class FavoritesController {
   constructor(
@@ -13,6 +15,7 @@ export class FavoritesController {
   ) {}
 
   /** Get all favorite photo IDs for this drive */
+  @SkipThrottle()
   @Get()
   async listFavorites(
     @Req() req: Request,
@@ -25,6 +28,7 @@ export class FavoritesController {
   }
 
   /** Get full favorite photos list for this drive */
+  @SkipThrottle()
   @Get('photos')
   async listFavoritePhotos(
     @Req() req: Request,
@@ -55,11 +59,8 @@ export class FavoritesController {
   async addBulkFavorites(
     @Req() req: Request,
     @Param('kdriveId', ParseIntPipe) kdriveId: number,
-    @Body() body: { photoIds: string[] },
+    @Body() body: BulkPhotoIdsDto,
   ) {
-    if (!Array.isArray(body.photoIds) || body.photoIds.length === 0) {
-      throw new BadRequestException('photoIds must be a non-empty array');
-    }
     const accountId = (req as any).user.sub;
     const driveRow = await this.drives.findDrive(accountId, kdriveId);
     await this.favorites.verifyPhotosBelongToDrive(body.photoIds, driveRow.id);
@@ -72,11 +73,8 @@ export class FavoritesController {
   async removeBulkFavorites(
     @Req() req: Request,
     @Param('kdriveId', ParseIntPipe) kdriveId: number,
-    @Body() body: { photoIds: string[] },
+    @Body() body: BulkPhotoIdsDto,
   ) {
-    if (!Array.isArray(body.photoIds) || body.photoIds.length === 0) {
-      throw new BadRequestException('photoIds must be a non-empty array');
-    }
     const accountId = (req as any).user.sub;
     await this.drives.findDrive(accountId, kdriveId);
     const removed = await this.favorites.removeFavorites(accountId, body.photoIds);

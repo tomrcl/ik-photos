@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and, asc, isNull } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
 import { account, drive, photo } from '../db/schema';
 import { CryptoService } from '../crypto/crypto.service';
@@ -97,7 +97,12 @@ export class DrivesService {
   }
 
   async resetDrive(driveId: string) {
-    await this.dbService.db.delete(photo).where(eq(photo.driveId, driveId));
+    // Only delete live photos — trashed rows must survive a reset so they
+    // stay visible in the Corbeille (otherwise they'd be lost from the user's
+    // view while still living on kDrive).
+    await this.dbService.db
+      .delete(photo)
+      .where(and(eq(photo.driveId, driveId), isNull(photo.deletedAt)));
     await this.dbService.db
       .update(drive)
       .set({

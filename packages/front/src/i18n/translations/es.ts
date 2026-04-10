@@ -32,7 +32,17 @@ export default {
   "theme.dark": "Oscuro",
   "lang.title": "Idioma",
   "menu.token": "Token API",
+  "menu.clearCache": "Vaciar caché",
   "menu.logout": "Cerrar sesión",
+  "menu.map": "Mapa",
+  "menu.showMemories": "Mostrar recuerdos",
+
+  // PWA
+  "pwa.updateAvailable": "Nueva versión disponible",
+  "pwa.update": "Actualizar",
+  "pwa.cacheCleared": "Caché vaciada",
+  "pwa.cacheClearError": "No se pudo vaciar la caché",
+  "pwa.dismiss": "Cerrar",
 
   // Token modal
   "token.title": "Token API Infomaniak",
@@ -85,17 +95,47 @@ export default {
   "selection.delete": "Eliminar ({count})",
   "selection.favorite": "Favoritos",
 
-  // Delete
-  "delete.confirm": "¿Eliminar {count} foto(s)? Esta acción es irreversible.",
-  "delete.button": "Eliminar",
+  // Delete (soft-delete → Papelera)
+  "delete.confirm_one": "¿Mover {count} foto a la papelera?",
+  "delete.confirm_other": "¿Mover {count} fotos a la papelera?",
+  "delete.button": "Mover a la papelera",
   "delete.cancel": "Cancelar",
-  "delete.success": "{count} foto(s) eliminada(s)",
+  "delete.success_one": "{count} foto movida a la papelera",
+  "delete.success_other": "{count} fotos movidas a la papelera",
+
+  // Trash (Papelera)
+  "trash.title": "Papelera",
+  "trash.empty": "La papelera está vacía",
+  "trash.retentionHint": "Los elementos de la papelera se eliminan definitivamente después de 30 días.",
+  "trash.restore": "Restaurar",
+  "trash.permanentDelete": "Eliminar definitivamente",
+  "trash.confirmPermanent_one": "¿Eliminar definitivamente {count} foto? Esta acción es irreversible.",
+  "trash.confirmPermanent_other": "¿Eliminar definitivamente {count} fotos? Esta acción es irreversible.",
+  "trash.restored_one": "{count} foto restaurada",
+  "trash.restored_other": "{count} fotos restauradas",
+  "trash.permDeleted_one": "{count} foto eliminada definitivamente",
+  "trash.permDeleted_other": "{count} fotos eliminadas definitivamente",
+  "trash.restoreError": "Error al restaurar",
+  "trash.permDeleteError": "Error al eliminar definitivamente",
+  "trash.daysUntilPurge_one": "En {count} día",
+  "trash.daysUntilPurge_other": "En {count} días",
 
   // Lightbox
   "lightbox.close": "Cerrar",
   "lightbox.download": "Descargar",
   "lightbox.rotate": "Rotar",
   "lightbox.favorite": "Favorito",
+  "lightbox.info": "Info",
+
+  // Photo info panel
+  "info.title": "Detalles",
+  "info.takenAt": "Fecha de captura",
+  "info.camera": "Cámara",
+  "info.lens": "Objetivo",
+  "info.exposure": "Exposición",
+  "info.dimensions": "Dimensiones",
+  "info.gps": "GPS",
+  "info.empty": "No hay metadatos disponibles",
 
   // Favorites
   "favorites.title": "Favoritos",
@@ -103,6 +143,18 @@ export default {
   "favorites.added": "Añadido a favoritos",
   "favorites.removed": "Eliminado de favoritos",
   "favorites.bulkAdded": "{count} foto(s) añadida(s) a favoritos",
+
+  // Memories
+  "memories.title": "Recuerdos",
+  "memories.yearsAgo_one": "Hace {count} año",
+  "memories.yearsAgo_other": "Hace {count} años",
+
+  // Map
+  "map.title": "Mapa",
+  "map.count_one": "{count} foto geolocalizada",
+  "map.count_other": "{count} fotos geolocalizadas",
+  "map.empty.title": "Ninguna foto geolocalizada",
+  "map.empty.description": "Las coordenadas GPS se extraen automáticamente durante la indexación de las fotos con EXIF.",
 
   // Format
   "format.sizeUnits": "B,KB,MB,GB,TB",

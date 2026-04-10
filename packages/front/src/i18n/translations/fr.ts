@@ -32,7 +32,17 @@ export default {
   "theme.dark": "Sombre",
   "lang.title": "Langue",
   "menu.token": "Token API",
+  "menu.clearCache": "Vider le cache",
   "menu.logout": "Déconnexion",
+  "menu.map": "Carte",
+  "menu.showMemories": "Afficher les souvenirs",
+
+  // PWA
+  "pwa.updateAvailable": "Nouvelle version disponible",
+  "pwa.update": "Mettre à jour",
+  "pwa.cacheCleared": "Cache vidé",
+  "pwa.cacheClearError": "Échec du vidage du cache",
+  "pwa.dismiss": "Fermer",
 
   // Token modal
   "token.title": "Token API Infomaniak",
@@ -85,17 +95,47 @@ export default {
   "selection.delete": "Supprimer ({count})",
   "selection.favorite": "Favoris",
 
-  // Delete
-  "delete.confirm": "Supprimer {count} photo(s) ? Cette action est irréversible.",
-  "delete.button": "Supprimer",
+  // Delete (soft-delete → Corbeille)
+  "delete.confirm_one": "Déplacer {count} photo vers la corbeille ?",
+  "delete.confirm_other": "Déplacer {count} photos vers la corbeille ?",
+  "delete.button": "Déplacer vers la corbeille",
   "delete.cancel": "Annuler",
-  "delete.success": "{count} photo(s) supprimée(s)",
+  "delete.success_one": "{count} photo déplacée vers la corbeille",
+  "delete.success_other": "{count} photos déplacées vers la corbeille",
+
+  // Trash (Corbeille)
+  "trash.title": "Corbeille",
+  "trash.empty": "La corbeille est vide",
+  "trash.retentionHint": "Les photos de la corbeille sont supprimées définitivement après 30 jours.",
+  "trash.restore": "Restaurer",
+  "trash.permanentDelete": "Supprimer définitivement",
+  "trash.confirmPermanent_one": "Supprimer définitivement {count} photo ? Cette action est irréversible.",
+  "trash.confirmPermanent_other": "Supprimer définitivement {count} photos ? Cette action est irréversible.",
+  "trash.restored_one": "{count} photo restaurée",
+  "trash.restored_other": "{count} photos restaurées",
+  "trash.permDeleted_one": "{count} photo supprimée définitivement",
+  "trash.permDeleted_other": "{count} photos supprimées définitivement",
+  "trash.restoreError": "Échec de la restauration",
+  "trash.permDeleteError": "Échec de la suppression définitive",
+  "trash.daysUntilPurge_one": "Dans {count} jour",
+  "trash.daysUntilPurge_other": "Dans {count} jours",
 
   // Lightbox
   "lightbox.close": "Fermer",
   "lightbox.download": "Télécharger",
   "lightbox.rotate": "Pivoter",
   "lightbox.favorite": "Favori",
+  "lightbox.info": "Infos",
+
+  // Photo info panel
+  "info.title": "Détails",
+  "info.takenAt": "Date de prise",
+  "info.camera": "Appareil",
+  "info.lens": "Objectif",
+  "info.exposure": "Exposition",
+  "info.dimensions": "Dimensions",
+  "info.gps": "GPS",
+  "info.empty": "Aucune métadonnée disponible",
 
   // Favorites
   "favorites.title": "Favoris",
@@ -103,6 +143,18 @@ export default {
   "favorites.added": "Ajouté aux favoris",
   "favorites.removed": "Retiré des favoris",
   "favorites.bulkAdded": "{count} photo(s) ajoutée(s) aux favoris",
+
+  // Memories
+  "memories.title": "Souvenirs",
+  "memories.yearsAgo_one": "Il y a {count} an",
+  "memories.yearsAgo_other": "Il y a {count} ans",
+
+  // Map
+  "map.title": "Carte",
+  "map.count_one": "{count} photo géolocalisée",
+  "map.count_other": "{count} photos géolocalisées",
+  "map.empty.title": "Aucune photo géolocalisée",
+  "map.empty.description": "Les coordonnées GPS sont extraites automatiquement lors de l'indexation des photos avec EXIF.",
 
   // Format
   "format.sizeUnits": "o,Ko,Mo,Go,To",

@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import { eq } from 'drizzle-orm';
@@ -8,6 +9,20 @@ import { AppModule } from './app.module';
 import { DbService } from './db/db.service';
 import { CryptoService } from './crypto/crypto.service';
 import { account } from './db/schema';
+
+// Conservative Content-Security-Policy. The backend is API-only — the SPA is
+// hosted elsewhere — but a CSP on API responses still hardens error pages and
+// any direct browsing of JSON endpoints. Allow OSM tiles for the map view.
+const CSP_HEADER = [
+  "default-src 'self'",
+  "img-src 'self' https://*.tile.openstreetmap.org data: blob:",
+  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self'",
+  "connect-src 'self'",
+  "font-src 'self' data:",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+].join('; ');
 
 // Build DATABASE_URL from individual DB_* vars if not set directly
 if (!process.env.DATABASE_URL && process.env.DB_HOST) {
@@ -87,8 +102,16 @@ async function bootstrap() {
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('X-XSS-Protection', '0'); // modern browsers: CSP is preferred
+    res.setHeader('Content-Security-Policy', CSP_HEADER);
     next();
   });
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: false,
+    }),
+  );
   app.setGlobalPrefix('api');
   app.enableCors({
     origin: config.get<string>('CORS_ORIGIN', 'http://localhost:3003'),

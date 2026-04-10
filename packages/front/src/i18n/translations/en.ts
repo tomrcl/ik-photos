@@ -32,7 +32,17 @@ export default {
   "theme.dark": "Dark",
   "lang.title": "Language",
   "menu.token": "API Token",
+  "menu.clearCache": "Clear cache",
   "menu.logout": "Log out",
+  "menu.map": "Map",
+  "menu.showMemories": "Show memories",
+
+  // PWA
+  "pwa.updateAvailable": "New version available",
+  "pwa.update": "Update",
+  "pwa.cacheCleared": "Cache cleared",
+  "pwa.cacheClearError": "Failed to clear cache",
+  "pwa.dismiss": "Dismiss",
 
   // Token modal
   "token.title": "Infomaniak API Token",
@@ -85,17 +95,47 @@ export default {
   "selection.delete": "Delete ({count})",
   "selection.favorite": "Favorites",
 
-  // Delete
-  "delete.confirm": "Delete {count} photo(s)? This cannot be undone.",
-  "delete.button": "Delete",
+  // Delete (soft-delete → Trash)
+  "delete.confirm_one": "Move {count} photo to trash?",
+  "delete.confirm_other": "Move {count} photos to trash?",
+  "delete.button": "Move to trash",
   "delete.cancel": "Cancel",
-  "delete.success": "{count} photo(s) deleted",
+  "delete.success_one": "{count} photo moved to trash",
+  "delete.success_other": "{count} photos moved to trash",
+
+  // Trash
+  "trash.title": "Trash",
+  "trash.empty": "The trash is empty",
+  "trash.retentionHint": "Items in the trash are permanently deleted after 30 days.",
+  "trash.restore": "Restore",
+  "trash.permanentDelete": "Delete permanently",
+  "trash.confirmPermanent_one": "Permanently delete {count} photo? This cannot be undone.",
+  "trash.confirmPermanent_other": "Permanently delete {count} photos? This cannot be undone.",
+  "trash.restored_one": "{count} photo restored",
+  "trash.restored_other": "{count} photos restored",
+  "trash.permDeleted_one": "{count} photo permanently deleted",
+  "trash.permDeleted_other": "{count} photos permanently deleted",
+  "trash.restoreError": "Restore failed",
+  "trash.permDeleteError": "Permanent delete failed",
+  "trash.daysUntilPurge_one": "In {count} day",
+  "trash.daysUntilPurge_other": "In {count} days",
 
   // Lightbox
   "lightbox.close": "Close",
   "lightbox.download": "Download",
   "lightbox.rotate": "Rotate",
   "lightbox.favorite": "Favorite",
+  "lightbox.info": "Info",
+
+  // Photo info panel
+  "info.title": "Details",
+  "info.takenAt": "Date taken",
+  "info.camera": "Camera",
+  "info.lens": "Lens",
+  "info.exposure": "Exposure",
+  "info.dimensions": "Dimensions",
+  "info.gps": "GPS",
+  "info.empty": "No metadata available",
 
   // Favorites
   "favorites.title": "Favorites",
@@ -103,6 +143,18 @@ export default {
   "favorites.added": "Added to favorites",
   "favorites.removed": "Removed from favorites",
   "favorites.bulkAdded": "{count} photo(s) added to favorites",
+
+  // Memories
+  "memories.title": "Memories",
+  "memories.yearsAgo_one": "{count} year ago",
+  "memories.yearsAgo_other": "{count} years ago",
+
+  // Map
+  "map.title": "Map",
+  "map.count_one": "{count} geolocated photo",
+  "map.count_other": "{count} geolocated photos",
+  "map.empty.title": "No geolocated photos",
+  "map.empty.description": "GPS coordinates are extracted automatically when photos with EXIF are indexed.",
 
   // Format
   "format.sizeUnits": "B,KB,MB,GB,TB",

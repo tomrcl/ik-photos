@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useHash } from "./hooks/useHash.ts";
 import { useAuth } from "./hooks/useAuth.ts";
@@ -7,8 +8,26 @@ import { TokenView } from "./views/TokenView.tsx";
 import { GalleryView } from "./views/GalleryView.tsx";
 import { LightboxView } from "./views/LightboxView.tsx";
 import { FavoritesView } from "./views/FavoritesView.tsx";
+import { TrashView } from "./views/TrashView.tsx";
+import { Spinner } from "./components/Spinner.tsx";
+import { UpdatePrompt } from "./components/UpdatePrompt.tsx";
 
-const queryClient = new QueryClient();
+// Lazy-loaded so Leaflet and its dependencies are code-split out of the main bundle.
+const MapView = lazy(() =>
+  import("./views/MapView.tsx").then((m) => ({ default: m.MapView })),
+);
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,           // 1 minute — most lists don't change that often
+      gcTime: 5 * 60_000,           // 5 min (default)
+      refetchOnWindowFocus: false,  // mobile-hostile, useless for a photo gallery
+      refetchOnReconnect: true,     // safe default
+      retry: 1,                     // don't hammer on failure
+    },
+  },
+});
 
 function Router() {
   const hash = useHash();
@@ -34,6 +53,22 @@ function Router() {
   const favMatch = hash.match(/^drive\/(\d+)\/favorites$/);
   if (favMatch) {
     return <FavoritesView kdriveId={Number(favMatch[1])} />;
+  }
+
+  // Trash (Corbeille) route
+  const trashMatch = hash.match(/^drive\/(\d+)\/trash$/);
+  if (trashMatch) {
+    return <TrashView kdriveId={Number(trashMatch[1])} />;
+  }
+
+  // Map route
+  const mapMatch = hash.match(/^drive\/(\d+)\/map$/);
+  if (mapMatch) {
+    return (
+      <Suspense fallback={<Spinner />}>
+        <MapView kdriveId={Number(mapMatch[1])} />
+      </Suspense>
+    );
   }
 
   // Parse drive-related routes
@@ -80,6 +115,7 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router />
+      <UpdatePrompt />
     </QueryClientProvider>
   );
 }

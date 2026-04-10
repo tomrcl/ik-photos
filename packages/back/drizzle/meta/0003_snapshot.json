@@ -1,0 +1,608 @@
+{
+  "id": "b0213e15-36ee-4320-9ebc-8303dd97312a",
+  "prevId": "29a8097c-f704-4e41-86c0-a491dfcc112e",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.Account": {
+      "name": "Account",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "passwordHash": {
+          "name": "passwordHash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "infomaniakToken": {
+          "name": "infomaniakToken",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "Account_email_unique": {
+          "name": "Account_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Drive": {
+      "name": "Drive",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "accountId": {
+          "name": "accountId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kdriveId": {
+          "name": "kdriveId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "color": {
+          "name": "color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'#0098FF'"
+        },
+        "indexStatus": {
+          "name": "indexStatus",
+          "type": "IndexStatus",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PENDING'"
+        },
+        "lastIndexedAt": {
+          "name": "lastIndexedAt",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "indexCursor": {
+          "name": "indexCursor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "minPhotoDate": {
+          "name": "minPhotoDate",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "maxPhotoDate": {
+          "name": "maxPhotoDate",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "totalPhotos": {
+          "name": "totalPhotos",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "Drive_accountId_kdriveId_key": {
+          "name": "Drive_accountId_kdriveId_key",
+          "columns": [
+            {
+              "expression": "accountId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "kdriveId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "Drive_accountId_Account_id_fk": {
+          "name": "Drive_accountId_Account_id_fk",
+          "tableFrom": "Drive",
+          "tableTo": "Account",
+          "columnsFrom": [
+            "accountId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Favorite": {
+      "name": "Favorite",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "accountId": {
+          "name": "accountId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "photoId": {
+          "name": "photoId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "Favorite_accountId_photoId_key": {
+          "name": "Favorite_accountId_photoId_key",
+          "columns": [
+            {
+              "expression": "accountId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "photoId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "Favorite_accountId_idx": {
+          "name": "Favorite_accountId_idx",
+          "columns": [
+            {
+              "expression": "accountId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "Favorite_accountId_Account_id_fk": {
+          "name": "Favorite_accountId_Account_id_fk",
+          "tableFrom": "Favorite",
+          "tableTo": "Account",
+          "columnsFrom": [
+            "accountId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "Favorite_photoId_Photo_id_fk": {
+          "name": "Favorite_photoId_Photo_id_fk",
+          "tableFrom": "Favorite",
+          "tableTo": "Photo",
+          "columnsFrom": [
+            "photoId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Photo": {
+      "name": "Photo",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "driveId": {
+          "name": "driveId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kdriveFileId": {
+          "name": "kdriveFileId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extension": {
+          "name": "extension",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "size": {
+          "name": "size",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "path": {
+          "name": "path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lastModifiedAt": {
+          "name": "lastModifiedAt",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mediaType": {
+          "name": "mediaType",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'image'"
+        },
+        "hasThumbnail": {
+          "name": "hasThumbnail",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "takenAt": {
+          "name": "takenAt",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "width": {
+          "name": "width",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "height": {
+          "name": "height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cameraMake": {
+          "name": "cameraMake",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cameraModel": {
+          "name": "cameraModel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lensModel": {
+          "name": "lensModel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "iso": {
+          "name": "iso",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "focalLength": {
+          "name": "focalLength",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aperture": {
+          "name": "aperture",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shutterSpeed": {
+          "name": "shutterSpeed",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gpsLat": {
+          "name": "gpsLat",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gpsLng": {
+          "name": "gpsLng",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "exifExtractedAt": {
+          "name": "exifExtractedAt",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletedAt": {
+          "name": "deletedAt",
+          "type": "timestamp (3)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "Photo_driveId_kdriveFileId_key": {
+          "name": "Photo_driveId_kdriveFileId_key",
+          "columns": [
+            {
+              "expression": "driveId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "kdriveFileId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "Photo_driveId_lastModifiedAt_idx": {
+          "name": "Photo_driveId_lastModifiedAt_idx",
+          "columns": [
+            {
+              "expression": "driveId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lastModifiedAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "Photo_lastModifiedAt_idx": {
+          "name": "Photo_lastModifiedAt_idx",
+          "columns": [
+            {
+              "expression": "lastModifiedAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "Photo_driveId_takenAt_idx": {
+          "name": "Photo_driveId_takenAt_idx",
+          "columns": [
+            {
+              "expression": "driveId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "takenAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "Photo_exifExtractedAt_idx": {
+          "name": "Photo_exifExtractedAt_idx",
+          "columns": [
+            {
+              "expression": "exifExtractedAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "Photo_driveId_deletedAt_idx": {
+          "name": "Photo_driveId_deletedAt_idx",
+          "columns": [
+            {
+              "expression": "driveId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "deletedAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "Photo_driveId_Drive_id_fk": {
+          "name": "Photo_driveId_Drive_id_fk",
+          "tableFrom": "Photo",
+          "tableTo": "Drive",
+          "columnsFrom": [
+            "driveId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.IndexStatus": {
+      "name": "IndexStatus",
+      "schema": "public",
+      "values": [
+        "PENDING",
+        "INDEXING",
+        "COMPLETE",
+        "ERROR"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

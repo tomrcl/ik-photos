@@ -1,16 +1,13 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, Req, Res, ParseIntPipe, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, Req, Res, ParseIntPipe, NotFoundException } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
-import { eq } from 'drizzle-orm';
-import { count } from 'drizzle-orm';
 import archiver from 'archiver';
 import sharp from 'sharp';
 import { PhotosService } from './photos.service';
 import { DrivesService } from '../drives/drives.service';
 import { KdriveService } from '../kdrive/kdrive.service';
-import { DbService } from '../db/db.service';
-import { photo, drive } from '../db/schema';
 import { RateLimiter } from '../indexation/rate-limiter';
+import { BulkPhotoIdsDto } from './dto/photo-ids.dto';
 
 /** Remove control chars, path separators, and encode for Content-Disposition */
 function sanitizeFilename(name: string): string {
@@ -20,17 +17,20 @@ function sanitizeFilename(name: string): string {
     .slice(0, 255);
 }
 
-@SkipThrottle()
+// SkipThrottle is applied selectively to read endpoints below — the gallery
+// fans out lots of /thumbnail and /preview requests and would otherwise hit
+// the global rate limit. Mutation endpoints (rotate, bulk delete) are NOT
+// skipped: they remain rate-limited.
 @Controller('drives/:kdriveId/photos')
 export class PhotosController {
   constructor(
     private photos: PhotosService,
     private drives: DrivesService,
     private kdrive: KdriveService,
-    private dbService: DbService,
     private rateLimiter: RateLimiter,
   ) {}
 
+  @SkipThrottle()
   @Get()
   async listPhotos(
     @Req() req: Request,
@@ -52,6 +52,7 @@ export class PhotosController {
     });
   }
 
+  @SkipThrottle()
   @Get('all')
   async listAllPhotos(
     @Req() req: Request,
@@ -63,6 +64,19 @@ export class PhotosController {
     return { photos };
   }
 
+  @SkipThrottle()
+  @Get('geo')
+  async listGeoPhotos(
+    @Req() req: Request,
+    @Param('kdriveId', ParseIntPipe) kdriveId: number,
+  ) {
+    const accountId = (req as any).user.sub;
+    const driveRow = await this.drives.findDrive(accountId, kdriveId);
+    const photos = await this.photos.listGeoPhotos(driveRow.id);
+    return { photos };
+  }
+
+  @SkipThrottle()
   @Get('years')
   async getYears(
     @Req() req: Request,
@@ -74,6 +88,7 @@ export class PhotosController {
     return { years };
   }
 
+  @SkipThrottle()
   @Get('months')
   async getMonths(
     @Req() req: Request,
@@ -85,6 +100,18 @@ export class PhotosController {
     return { months };
   }
 
+  @SkipThrottle()
+  @Get('memories')
+  async getMemories(
+    @Req() req: Request,
+    @Param('kdriveId', ParseIntPipe) kdriveId: number,
+  ) {
+    const accountId = (req as any).user.sub;
+    const driveRow = await this.drives.findDrive(accountId, kdriveId);
+    return this.photos.getMemories(driveRow.id);
+  }
+
+  @SkipThrottle()
   @Get(':id/thumbnail')
   async getThumbnail(
     @Req() req: Request,
@@ -104,6 +131,7 @@ export class PhotosController {
     res.send(buffer);
   }
 
+  @SkipThrottle()
   @Get(':id/preview')
   async getPreview(
     @Req() req: Request,
@@ -128,6 +156,7 @@ export class PhotosController {
     res.send(buffer);
   }
 
+  @SkipThrottle()
   @Get(':id/download')
   async download(
     @Req() req: Request,
@@ -148,6 +177,7 @@ export class PhotosController {
     res.send(buffer);
   }
 
+  @SkipThrottle()
   @Get(':id/stream')
   async stream(
     @Req() req: Request,
@@ -234,36 +264,21 @@ export class PhotosController {
   async deletePhotos(
     @Req() req: Request,
     @Param('kdriveId', ParseIntPipe) kdriveId: number,
-    @Body() body: { photoIds: string[] },
+    @Body() body: BulkPhotoIdsDto,
   ) {
-    const photoIds = body.photoIds;
-    if (!Array.isArray(photoIds) || photoIds.length === 0) {
-      throw new BadRequestException('photoIds must be a non-empty array');
-    }
-
     const accountId = (req as any).user.sub;
     const driveRow = await this.drives.findDrive(accountId, kdriveId);
-    const token = await this.drives.getDecryptedToken(accountId);
 
-    const deletedPhotos = await this.photos.deletePhotos(driveRow.id, photoIds);
+    // Soft delete — photos move to the Corbeille. kDrive is untouched.
+    const deleted = await this.photos.softDeletePhotos(driveRow.id, body.photoIds);
 
-    // Delete on kDrive in parallel (best-effort)
-    await Promise.allSettled(
-      deletedPhotos.map(p => this.kdrive.deleteFile(token, kdriveId, p.kdriveFileId))
-    );
+    // Incremental adjust on drive.totalPhotos. The full self-healing recount
+    // still runs at the end of indexation, so any drift gets corrected.
+    if (deleted > 0) {
+      await this.photos.adjustDriveTotalPhotos(driveRow.id, -deleted);
+    }
 
-    // Update drive photo count
-    const [{ value: totalPhotos }] = await this.dbService.db
-      .select({ value: count() })
-      .from(photo)
-      .where(eq(photo.driveId, driveRow.id));
-
-    await this.dbService.db
-      .update(drive)
-      .set({ totalPhotos })
-      .where(eq(drive.id, driveRow.id));
-
-    return { deleted: deletedPhotos.length };
+    return { deleted };
   }
 
   @Post('download-zip')
@@ -271,15 +286,9 @@ export class PhotosController {
     @Req() req: Request,
     @Res() res: Response,
     @Param('kdriveId', ParseIntPipe) kdriveId: number,
-    @Body() body: { photoIds: string[] },
+    @Body() body: BulkPhotoIdsDto,
   ) {
     const photoIds = body.photoIds;
-    if (!Array.isArray(photoIds) || photoIds.length === 0) {
-      throw new BadRequestException('photoIds must be a non-empty array');
-    }
-    if (photoIds.length > 500) {
-      throw new BadRequestException('Maximum 500 photos per ZIP');
-    }
 
     const accountId = (req as any).user.sub;
     const driveRow = await this.drives.findDrive(accountId, kdriveId);

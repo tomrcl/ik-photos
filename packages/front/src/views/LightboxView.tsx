@@ -6,6 +6,7 @@ import { formatDate } from "../utils/format.ts";
 import { useI18n } from "../i18n/useI18n.ts";
 import { ConfirmModal } from "../components/ConfirmModal.tsx";
 import { useMonthPhotos } from "../hooks/useMonthPhotos.ts";
+import { purgePhotoCache } from "../utils/swCache.ts";
 
 export function LightboxView({
   kdriveId,
@@ -37,6 +38,7 @@ export function LightboxView({
   const [rotating, setRotating] = useState(false);
   const [cacheBuster, setCacheBuster] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   const currentIndex = siblings.findIndex((f) => f.id === currentId);
   const currentFile: Photo | undefined =
@@ -56,7 +58,7 @@ export function LightboxView({
   useEffect(() => {
     if (currentIndex < 0 || !currentFile) return;
     const monthCounts = queryClient.getQueryData<MonthCount[]>(["monthCounts", kdriveId]) ?? [];
-    const curDate = new Date(currentFile.lastModifiedAt);
+    const curDate = new Date(currentFile.takenAt ?? currentFile.lastModifiedAt);
     const curYear = curDate.getFullYear();
     const curMonth = curDate.getMonth() + 1;
     const mcIdx = monthCounts.findIndex((mc) => mc.year === curYear && mc.month === curMonth);
@@ -131,6 +133,10 @@ export function LightboxView({
     setRotating(true);
     try {
       await rotatePhoto(kdriveId, currentId);
+      // Drop just this photo's thumbnail/preview from the SW runtime cache so
+      // the next fetch returns the rotated bytes instead of a stale CacheFirst
+      // hit. Other photos stay cached.
+      await purgePhotoCache(kdriveId, currentId);
       const ts = Date.now();
       setCacheBuster(ts);
       // Store cache buster so gallery thumbnails also refresh
@@ -166,9 +172,12 @@ export function LightboxView({
     setDeleting(true);
     try {
       await deletePhotos(kdriveId, [currentId]);
+      await purgePhotoCache(kdriveId, currentId);
       await queryClient.invalidateQueries({ queryKey: ["monthCounts", kdriveId] });
       resetMonthPhotos();
       await queryClient.invalidateQueries({ queryKey: ["drives"] });
+      await queryClient.invalidateQueries({ queryKey: ["favoritePhotos", kdriveId] });
+      await queryClient.invalidateQueries({ queryKey: ["memories", kdriveId] });
       setShowDeleteConfirm(false);
 
       // Navigate to next photo or close lightbox
@@ -197,6 +206,7 @@ export function LightboxView({
       if (e.key === "Escape") goBack();
       if (e.key === "ArrowLeft") navigatePhoto(-1);
       if (e.key === "ArrowRight") navigatePhoto(1);
+      if (e.key === "i" || e.key === "I") setShowInfo((v) => !v);
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
@@ -329,9 +339,23 @@ export function LightboxView({
         <div className="flex items-center gap-3">
           {currentFile && (
             <span className="text-white/70 text-sm hidden sm:inline">
-              {formatDate(currentFile.lastModifiedAt)}
+              {formatDate(currentFile.takenAt ?? currentFile.lastModifiedAt)}
             </span>
           )}
+          <button
+            className={`cursor-pointer p-1 ${showInfo ? "text-blue-400" : "text-white/80 hover:text-white"}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowInfo((v) => !v);
+            }}
+            title={t("lightbox.info")}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+          </button>
           <button
             className={`cursor-pointer p-1 ${isFavorite ? "text-yellow-400" : "text-white/80 hover:text-white"}`}
             onClick={(e) => {
@@ -482,6 +506,10 @@ export function LightboxView({
         </>
       )}
 
+      {showInfo && currentFile && (
+        <PhotoInfoPanel photo={currentFile} onClose={() => setShowInfo(false)} />
+      )}
+
       {rotating && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50">
           <svg className="animate-spin h-10 w-10 text-white" viewBox="0 0 24 24" fill="none">
@@ -500,6 +528,68 @@ export function LightboxView({
           loading={deleting}
         />
       )}
+    </div>
+  );
+}
+
+function PhotoInfoPanel({ photo, onClose }: { photo: Photo; onClose: () => void }) {
+  const { t } = useI18n();
+
+  // Build exposure string from available bits
+  const exposureParts: string[] = [];
+  if (photo.aperture != null) exposureParts.push(`f/${photo.aperture}`);
+  if (photo.shutterSpeed) exposureParts.push(photo.shutterSpeed);
+  if (photo.iso != null) exposureParts.push(`ISO ${photo.iso}`);
+  if (photo.focalLength != null) exposureParts.push(`${Math.round(photo.focalLength)}mm`);
+  const exposure = exposureParts.join(" · ");
+
+  const camera = [photo.cameraMake, photo.cameraModel].filter(Boolean).join(" ").trim();
+  const dimensions =
+    photo.width != null && photo.height != null ? `${photo.width} × ${photo.height}` : null;
+  const gps =
+    photo.gpsLat != null && photo.gpsLng != null
+      ? `${photo.gpsLat.toFixed(5)}, ${photo.gpsLng.toFixed(5)}`
+      : null;
+
+  const rows: { label: string; value: string }[] = [];
+  // Only show the capture date when the photo actually has EXIF takenAt —
+  // don't fall back to lastModifiedAt (file mtime) which would mislead the user.
+  if (photo.takenAt) rows.push({ label: t("info.takenAt"), value: formatDate(photo.takenAt) });
+  if (camera) rows.push({ label: t("info.camera"), value: camera });
+  if (photo.lensModel) rows.push({ label: t("info.lens"), value: photo.lensModel });
+  if (exposure) rows.push({ label: t("info.exposure"), value: exposure });
+  if (dimensions) rows.push({ label: t("info.dimensions"), value: dimensions });
+  if (gps) rows.push({ label: t("info.gps"), value: gps });
+
+  return (
+    <div
+      className="absolute right-0 top-0 bottom-0 z-30 w-80 max-w-full bg-black/85 backdrop-blur-sm text-white border-l border-white/10 overflow-y-auto"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+        <h4 className="text-sm font-semibold uppercase tracking-wide">{t("info.title")}</h4>
+        <button
+          onClick={onClose}
+          className="text-white/70 hover:text-white cursor-pointer p-1"
+          title={t("lightbox.close")}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <dl className="px-4 py-3 space-y-3 text-sm">
+        {rows.length === 0 && (
+          <p className="text-white/60 italic">{t("info.empty")}</p>
+        )}
+        {rows.map((row) => (
+          <div key={row.label}>
+            <dt className="text-xs uppercase tracking-wide text-white/50">{row.label}</dt>
+            <dd className="text-white mt-0.5 break-words">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }

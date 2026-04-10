@@ -15,6 +15,34 @@
       "when": 1772749000000,
       "tag": "0001_add_favorites",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775762121729,
+      "tag": "0002_bored_madame_hydra",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775762895998,
+      "tag": "0003_yummy_screwball",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775769922013,
+      "tag": "0004_motionless_morg",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775799089728,
+      "tag": "0005_illegal_daimon_hellstrom",
+      "breakpoints": true
     }
   ]
 }

@@ -32,7 +32,17 @@ export default {
   "theme.dark": "Dunkel",
   "lang.title": "Sprache",
   "menu.token": "API-Token",
+  "menu.clearCache": "Cache leeren",
   "menu.logout": "Abmelden",
+  "menu.map": "Karte",
+  "menu.showMemories": "Erinnerungen anzeigen",
+
+  // PWA
+  "pwa.updateAvailable": "Neue Version verfügbar",
+  "pwa.update": "Aktualisieren",
+  "pwa.cacheCleared": "Cache geleert",
+  "pwa.cacheClearError": "Cache konnte nicht geleert werden",
+  "pwa.dismiss": "Schließen",
 
   // Token modal
   "token.title": "Infomaniak-API-Token",
@@ -85,17 +95,47 @@ export default {
   "selection.delete": "Löschen ({count})",
   "selection.favorite": "Favoriten",
 
-  // Delete
-  "delete.confirm": "{count} Foto(s) löschen? Dies kann nicht rückgängig gemacht werden.",
-  "delete.button": "Löschen",
+  // Delete (soft-delete → Papierkorb)
+  "delete.confirm_one": "{count} Foto in den Papierkorb verschieben?",
+  "delete.confirm_other": "{count} Fotos in den Papierkorb verschieben?",
+  "delete.button": "In den Papierkorb",
   "delete.cancel": "Abbrechen",
-  "delete.success": "{count} Foto(s) gelöscht",
+  "delete.success_one": "{count} Foto in den Papierkorb verschoben",
+  "delete.success_other": "{count} Fotos in den Papierkorb verschoben",
+
+  // Trash (Papierkorb)
+  "trash.title": "Papierkorb",
+  "trash.empty": "Der Papierkorb ist leer",
+  "trash.retentionHint": "Elemente im Papierkorb werden nach 30 Tagen endgültig gelöscht.",
+  "trash.restore": "Wiederherstellen",
+  "trash.permanentDelete": "Endgültig löschen",
+  "trash.confirmPermanent_one": "{count} Foto endgültig löschen? Dies kann nicht rückgängig gemacht werden.",
+  "trash.confirmPermanent_other": "{count} Fotos endgültig löschen? Dies kann nicht rückgängig gemacht werden.",
+  "trash.restored_one": "{count} Foto wiederhergestellt",
+  "trash.restored_other": "{count} Fotos wiederhergestellt",
+  "trash.permDeleted_one": "{count} Foto endgültig gelöscht",
+  "trash.permDeleted_other": "{count} Fotos endgültig gelöscht",
+  "trash.restoreError": "Wiederherstellung fehlgeschlagen",
+  "trash.permDeleteError": "Endgültiges Löschen fehlgeschlagen",
+  "trash.daysUntilPurge_one": "In {count} Tag",
+  "trash.daysUntilPurge_other": "In {count} Tagen",
 
   // Lightbox
   "lightbox.close": "Schließen",
   "lightbox.download": "Herunterladen",
   "lightbox.rotate": "Drehen",
   "lightbox.favorite": "Favorit",
+  "lightbox.info": "Info",
+
+  // Photo info panel
+  "info.title": "Details",
+  "info.takenAt": "Aufnahmedatum",
+  "info.camera": "Kamera",
+  "info.lens": "Objektiv",
+  "info.exposure": "Belichtung",
+  "info.dimensions": "Abmessungen",
+  "info.gps": "GPS",
+  "info.empty": "Keine Metadaten verfügbar",
 
   // Favorites
   "favorites.title": "Favoriten",
@@ -103,6 +143,18 @@ export default {
   "favorites.added": "Zu Favoriten hinzugefügt",
   "favorites.removed": "Aus Favoriten entfernt",
   "favorites.bulkAdded": "{count} Foto(s) zu Favoriten hinzugefügt",
+
+  // Memories
+  "memories.title": "Erinnerungen",
+  "memories.yearsAgo_one": "Vor {count} Jahr",
+  "memories.yearsAgo_other": "Vor {count} Jahren",
+
+  // Map
+  "map.title": "Karte",
+  "map.count_one": "{count} verortetes Foto",
+  "map.count_other": "{count} verortete Fotos",
+  "map.empty.title": "Keine verorteten Fotos",
+  "map.empty.description": "GPS-Koordinaten werden automatisch extrahiert, wenn Fotos mit EXIF indexiert werden.",
 
   // Format
   "format.sizeUnits": "B,KB,MB,GB,TB",

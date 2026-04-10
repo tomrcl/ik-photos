@@ -4,7 +4,10 @@ import { Request } from 'express';
 import { DrivesService } from './drives.service';
 import { IndexationService } from '../indexation/indexation.service';
 
-@SkipThrottle()
+// SkipThrottle is applied selectively to the read endpoints below — the
+// gallery polls /drives and /:kdriveId/status frequently. The write path
+// (POST /:kdriveId/index) remains throttled to prevent abuse, especially
+// since it can trigger resetDrive when called with mode=full.
 @Controller('drives')
 export class DrivesController {
   constructor(
@@ -12,6 +15,7 @@ export class DrivesController {
     private indexation: IndexationService,
   ) {}
 
+  @SkipThrottle()
   @Get()
   async listDrives(@Req() req: Request, @Query('sync') sync?: string) {
     const accountId = (req as any).user.sub;
@@ -53,6 +57,7 @@ export class DrivesController {
     return { message: 'Indexation started' };
   }
 
+  @SkipThrottle()
   @Get(':kdriveId/status')
   async getStatus(
     @Req() req: Request,

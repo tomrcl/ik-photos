@@ -1,6 +1,7 @@
 import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Readable } from 'stream';
+import { RateLimiter } from '../indexation/rate-limiter';
 
 export interface KDriveFileRaw {
   id: number;
@@ -36,7 +37,10 @@ export class KdriveService {
   private readonly logger = new Logger(KdriveService.name);
   private readonly apiBase: string;
 
-  constructor(private config: ConfigService) {
+  constructor(
+    private config: ConfigService,
+    private rateLimiter: RateLimiter,
+  ) {
     this.apiBase = this.config.get<string>('KDRIVE_API_BASE', 'https://api.kdrive.infomaniak.com');
   }
 
@@ -134,7 +138,11 @@ export class KdriveService {
     };
   }
 
-  async deleteFile(token: string, driveId: number, fileId: number): Promise<void> {
+  async deleteFile(accountId: string, token: string, driveId: number, fileId: number): Promise<void> {
+    // Rate-limit kDrive deletes per account, matching the pattern used by
+    // every other kdrive call site. The bulk-delete and trash-purge paths
+    // can fan out hundreds of these in quick succession.
+    await this.rateLimiter.acquire(accountId);
     const url = `${this.apiBase}/2/drive/${driveId}/files/${fileId}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30_000);
@@ -147,6 +155,46 @@ export class KdriveService {
       if (!res.ok && res.status !== 404) {
         throw new Error(`Failed to delete file ${fileId}: ${res.status}`);
       }
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
+   * Try a Range request to fetch only the first N bytes of a file.
+   * Returns { buffer, partial } — partial=true if the server honored the Range request.
+   * Falls back to fetching the full file if Range is not supported.
+   */
+  async fetchRange(
+    token: string,
+    driveId: number,
+    fileId: number,
+    bytes: number,
+  ): Promise<{ buffer: Buffer; partial: boolean }> {
+    const url = `${this.apiBase}/2/drive/${driveId}/files/${fileId}/download`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60_000);
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Range: `bytes=0-${bytes - 1}`,
+        },
+        signal: controller.signal,
+      });
+      if (!res.ok && res.status !== 206) {
+        const body = await res.text();
+        this.logger.warn(`kDrive range fetch error: ${res.status} ${url} - ${body}`);
+        if (res.status === 401) {
+          throw new ForbiddenException('Infomaniak token is invalid or expired');
+        }
+        throw new Error(`Failed to fetch range: ${res.status}`);
+      }
+      const arrayBuffer = await res.arrayBuffer();
+      return {
+        buffer: Buffer.from(arrayBuffer),
+        partial: res.status === 206,
+      };
     } finally {
       clearTimeout(timer);
     }

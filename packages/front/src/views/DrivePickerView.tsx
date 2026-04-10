@@ -49,7 +49,7 @@ function IndexBadge({ drive }: { drive: Drive }) {
           e.stopPropagation();
           mutation.mutate(true);
         }}
-        disabled={mutation.isLoading}
+        disabled={mutation.isPending}
         className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 px-2 py-1 rounded-full cursor-pointer transition-colors"
       >
         {t("drives.errorRetry")}
@@ -63,7 +63,7 @@ function IndexBadge({ drive }: { drive: Drive }) {
         e.stopPropagation();
         mutation.mutate(false);
       }}
-      disabled={mutation.isLoading}
+      disabled={mutation.isPending}
       className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 px-2 py-1 rounded-full cursor-pointer transition-colors"
     >
       {t("drives.index")}
@@ -85,10 +85,10 @@ export function DrivePickerView() {
     },
     retry: (_, error) => !(error instanceof TokenExpiredError),
     refetchOnWindowFocus: false,
-    refetchInterval: (data) =>
-      data?.some((d) => d.indexStatus === "INDEXING") ? 2000 : false,
+    refetchInterval: (query) =>
+      query.state.data?.some((d) => d.indexStatus === "INDEXING") ? 2000 : false,
   });
-  const { data: drives, isLoading, isError } = query;
+  const { data: drives, isPending, isError } = query;
 
   // Auto-redirect when there's only one drive and it's ready
   const didRedirect = useRef(false);
@@ -109,7 +109,7 @@ export function DrivePickerView() {
     <>
       <Header breadcrumbs={[{ label: t("drives.breadcrumb"), hash: "drives" }]} />
       <div className="p-6">
-        {isLoading && <Spinner />}
+        {isPending && <Spinner />}
 
         {isError && (
           <div className="text-center py-12">

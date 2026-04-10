@@ -100,5 +100,14 @@ export function logout(): void {
   }).catch(() => {});
   clearTokens();
   notifyAuthChange();
+  // Clear the NetworkFirst `/api/` cache so the next user on a shared device
+  // cannot read private responses via the offline cache. Fire-and-forget.
+  if (typeof caches !== "undefined") {
+    Promise.all([
+      caches.delete("api-cache"),
+      caches.delete("thumbnails-cache"),
+      caches.delete("previews-cache"),
+    ]).catch(() => {});
+  }
   window.location.hash = "#login";
 }

@@ -32,7 +32,17 @@ export default {
   "theme.dark": "Scuro",
   "lang.title": "Lingua",
   "menu.token": "Token API",
+  "menu.clearCache": "Svuota cache",
   "menu.logout": "Disconnetti",
+  "menu.map": "Mappa",
+  "menu.showMemories": "Mostra ricordi",
+
+  // PWA
+  "pwa.updateAvailable": "Nuova versione disponibile",
+  "pwa.update": "Aggiorna",
+  "pwa.cacheCleared": "Cache svuotata",
+  "pwa.cacheClearError": "Impossibile svuotare la cache",
+  "pwa.dismiss": "Chiudi",
 
   // Token modal
   "token.title": "Token API Infomaniak",
@@ -85,17 +95,47 @@ export default {
   "selection.delete": "Elimina ({count})",
   "selection.favorite": "Preferiti",
 
-  // Delete
-  "delete.confirm": "Eliminare {count} foto? Questa azione è irreversibile.",
-  "delete.button": "Elimina",
+  // Delete (soft-delete → Cestino)
+  "delete.confirm_one": "Spostare {count} foto nel cestino?",
+  "delete.confirm_other": "Spostare {count} foto nel cestino?",
+  "delete.button": "Sposta nel cestino",
   "delete.cancel": "Annulla",
-  "delete.success": "{count} foto eliminate",
+  "delete.success_one": "{count} foto spostata nel cestino",
+  "delete.success_other": "{count} foto spostate nel cestino",
+
+  // Trash (Cestino)
+  "trash.title": "Cestino",
+  "trash.empty": "Il cestino è vuoto",
+  "trash.retentionHint": "Gli elementi nel cestino vengono eliminati definitivamente dopo 30 giorni.",
+  "trash.restore": "Ripristina",
+  "trash.permanentDelete": "Elimina definitivamente",
+  "trash.confirmPermanent_one": "Eliminare definitivamente {count} foto? Questa azione è irreversibile.",
+  "trash.confirmPermanent_other": "Eliminare definitivamente {count} foto? Questa azione è irreversibile.",
+  "trash.restored_one": "{count} foto ripristinata",
+  "trash.restored_other": "{count} foto ripristinate",
+  "trash.permDeleted_one": "{count} foto eliminata definitivamente",
+  "trash.permDeleted_other": "{count} foto eliminate definitivamente",
+  "trash.restoreError": "Ripristino non riuscito",
+  "trash.permDeleteError": "Eliminazione definitiva non riuscita",
+  "trash.daysUntilPurge_one": "Tra {count} giorno",
+  "trash.daysUntilPurge_other": "Tra {count} giorni",
 
   // Lightbox
   "lightbox.close": "Chiudi",
   "lightbox.download": "Scarica",
   "lightbox.rotate": "Ruota",
   "lightbox.favorite": "Preferito",
+  "lightbox.info": "Info",
+
+  // Photo info panel
+  "info.title": "Dettagli",
+  "info.takenAt": "Data di scatto",
+  "info.camera": "Fotocamera",
+  "info.lens": "Obiettivo",
+  "info.exposure": "Esposizione",
+  "info.dimensions": "Dimensioni",
+  "info.gps": "GPS",
+  "info.empty": "Nessun metadato disponibile",
 
   // Favorites
   "favorites.title": "Preferiti",
@@ -103,6 +143,18 @@ export default {
   "favorites.added": "Aggiunto ai preferiti",
   "favorites.removed": "Rimosso dai preferiti",
   "favorites.bulkAdded": "{count} foto aggiunta/e ai preferiti",
+
+  // Memories
+  "memories.title": "Ricordi",
+  "memories.yearsAgo_one": "{count} anno fa",
+  "memories.yearsAgo_other": "{count} anni fa",
+
+  // Map
+  "map.title": "Mappa",
+  "map.count_one": "{count} foto geolocalizzata",
+  "map.count_other": "{count} foto geolocalizzate",
+  "map.empty.title": "Nessuna foto geolocalizzata",
+  "map.empty.description": "Le coordinate GPS vengono estratte automaticamente durante l'indicizzazione delle foto con EXIF.",
 
   // Format
   "format.sizeUnits": "B,KB,MB,GB,TB",

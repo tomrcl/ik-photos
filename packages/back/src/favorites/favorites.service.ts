@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, isNull } from 'drizzle-orm';
 import { DbService } from '../db/db.service';
 import { favorite, photo } from '../db/schema';
 
@@ -12,7 +12,13 @@ export class FavoritesService {
       .select({ photoId: favorite.photoId })
       .from(favorite)
       .innerJoin(photo, eq(favorite.photoId, photo.id))
-      .where(and(eq(favorite.accountId, accountId), eq(photo.driveId, driveId)));
+      .where(
+        and(
+          eq(favorite.accountId, accountId),
+          eq(photo.driveId, driveId),
+          isNull(photo.deletedAt),
+        ),
+      );
     return rows.map((r) => r.photoId);
   }
 
@@ -22,19 +28,27 @@ export class FavoritesService {
         id: photo.id,
         name: photo.name,
         lastModifiedAt: photo.lastModifiedAt,
+        takenAt: photo.takenAt,
         hasThumbnail: photo.hasThumbnail,
         mediaType: photo.mediaType,
         favoritedAt: favorite.createdAt,
       })
       .from(favorite)
       .innerJoin(photo, eq(favorite.photoId, photo.id))
-      .where(and(eq(favorite.accountId, accountId), eq(photo.driveId, driveId)))
+      .where(
+        and(
+          eq(favorite.accountId, accountId),
+          eq(photo.driveId, driveId),
+          isNull(photo.deletedAt),
+        ),
+      )
       .orderBy(favorite.createdAt);
 
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
       lastModifiedAt: r.lastModifiedAt.toISOString(),
+      takenAt: r.takenAt?.toISOString() ?? null,
       hasThumbnail: r.hasThumbnail,
       mediaType: r.mediaType,
       favoritedAt: r.favoritedAt.toISOString(),
@@ -77,7 +91,7 @@ export class FavoritesService {
     const rows = await this.dbService.db
       .select({ id: photo.id })
       .from(photo)
-      .where(and(eq(photo.id, photoId), eq(photo.driveId, driveId)))
+      .where(and(eq(photo.id, photoId), eq(photo.driveId, driveId), isNull(photo.deletedAt)))
       .limit(1);
     if (rows.length === 0) throw new NotFoundException('Photo not found in this drive');
   }
@@ -87,7 +101,7 @@ export class FavoritesService {
     const rows = await this.dbService.db
       .select({ id: photo.id })
       .from(photo)
-      .where(and(inArray(photo.id, photoIds), eq(photo.driveId, driveId)));
+      .where(and(inArray(photo.id, photoIds), eq(photo.driveId, driveId), isNull(photo.deletedAt)));
     if (rows.length !== photoIds.length) throw new NotFoundException('Some photos not found in this drive');
   }
 
