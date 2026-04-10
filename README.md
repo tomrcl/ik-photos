@@ -7,10 +7,18 @@ A self-hosted web gallery for browsing, downloading, and managing photos stored 
 - Browse all photos and videos from your kDrive drives
 - Responsive grid gallery with virtual scrolling and timeline scrubber
 - Lightbox with preview preloading for instant navigation
+- **Photo rotation** — lossless 90° rotation via Sharp, preserving EXIF metadata
+- **Favorites** — mark photos as favorites, bulk add/remove, dedicated favorites view
+- **Trash** — soft-delete with 30-day retention, restore or permanent delete, auto-purge daily at 03:00
+- **Map view** — interactive map (Leaflet / OpenStreetMap) showing all geotagged photos with marker clustering
+- **Memories** — "On this day" strip showing photos from the same day in past years
+- **EXIF extraction** — background extraction of capture date, camera, lens, ISO, focal length, aperture, shutter speed, GPS coordinates (128 KB range fetch, batch of 50 every 30 min)
 - Multi-selection with shift-click and long-press support
 - Bulk download as ZIP
 - Delete photos (removes from kDrive and local database)
+- **Smart indexation** — pipelined batch fetching, incremental re-index (skips unchanged photos), reconciliation of deleted photos with 10% safety cap
 - Automatic periodic re-indexing (configurable cron)
+- **PWA** — installable with offline support, caches thumbnails (2000 items / 30 days), previews (200 / 7 days), and API responses (100 / 1 hour)
 - Multi-language support (EN, FR, DE, ES, IT)
 - Light/dark theme
 - JWT authentication with encrypted token storage (AES-256-GCM)

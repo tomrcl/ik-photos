@@ -90,6 +90,7 @@ export class IndexationService {
       let cursor: string | undefined = driveRow?.indexCursor ?? undefined;
       let currentCursor: string | undefined = cursor;
       let newPhotos = 0;
+      let scannedPhotos = 0;
       if (cursor) {
         newPhotos = photoCount;
         this.logger.log(`Drive ${kdriveId}: resuming from saved cursor (${photoCount} photos already indexed)`);
@@ -241,6 +242,7 @@ export class IndexationService {
           }
         }
         newPhotos += toUpsert.length;
+        scannedPhotos += result.files.length;
 
         // Advance cursor and update progress + cursor in DB
         currentCursor = result.cursor ?? undefined;
@@ -250,7 +252,7 @@ export class IndexationService {
           .where(eq(drive.id, driveId));
 
         this.logger.log(
-          `Drive ${kdriveId}: batch ${result.files.length} files — ${toUpsert.length} new/updated, ${unchangedInBatch} unchanged`,
+          `Drive ${kdriveId}: batch ${result.files.length} files — ${toUpsert.length} new/updated, ${unchangedInBatch} unchanged (${scannedPhotos} scanned so far)`,
         );
 
         // On re-index: if entire batch was unchanged, we've caught up.
@@ -296,8 +298,8 @@ export class IndexationService {
           lastIndexedAt: new Date(),
           indexCursor: null,
           totalPhotos,
-          minPhotoDate: dateRange.minDate,
-          maxPhotoDate: dateRange.maxDate,
+          minPhotoDate: dateRange.minDate ? new Date(dateRange.minDate) : null,
+          maxPhotoDate: dateRange.maxDate ? new Date(dateRange.maxDate) : null,
         })
         .where(eq(drive.id, driveId));
 
