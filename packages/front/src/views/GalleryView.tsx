@@ -13,6 +13,7 @@ import { startIndexation, getDriveStatus } from "../api/drives.ts";
 import { listFavorites, addBulkFavorites } from "../api/favorites.ts";
 import { navigate } from "../hooks/useHash.ts";
 import { usePhotoSelection } from "../hooks/usePhotoSelection.ts";
+import { useDragSelect } from "../hooks/useDragSelect.ts";
 import { SelectionToolbar } from "../components/SelectionToolbar.tsx";
 import { ReindexModal } from "../components/ReindexModal.tsx";
 import { useI18n } from "../i18n/useI18n.ts";
@@ -271,7 +272,7 @@ export function GalleryView({ kdriveId, initialPos }: { kdriveId: number; initia
     if (!groups.length || visibleYear == null || visibleMonth == null) return;
     const visIdx = groups.findIndex((g) => g.year === visibleYear && g.month === visibleMonth);
     if (visIdx < 0) return;
-    for (let i = Math.max(0, visIdx - 1); i <= Math.min(groups.length - 1, visIdx + 1); i++) {
+    for (let i = Math.max(0, visIdx - 3); i <= Math.min(groups.length - 1, visIdx + 3); i++) {
       loadMonth(groups[i].year, groups[i].month);
     }
   }, [visibleYear, visibleMonth, groups, loadMonth]);
@@ -292,7 +293,18 @@ export function GalleryView({ kdriveId, initialPos }: { kdriveId: number; initia
     selectionActive,
     handleSelect,
     clearSelection,
+    setSelection,
   } = usePhotoSelection(allPhotoIds);
+
+  const handleDragSelectionChange = useCallback(
+    (ids: Set<string>) => setSelection(ids),
+    [setSelection],
+  );
+
+  const { isDragging, dragRect } = useDragSelect({
+    currentSelection: selected,
+    onSelectionChange: handleDragSelectionChange,
+  });
 
   const handleDelete = async (photoIds: string[]) => {
     await deletePhotos(kdriveId, photoIds);
@@ -424,8 +436,8 @@ export function GalleryView({ kdriveId, initialPos }: { kdriveId: number; initia
           },
         ]}
       />
-      <div className="p-4 pr-10">
-        {!initialPos && <MemoriesStrip kdriveId={kdriveId} />}
+      <div className="p-4 pr-10" data-drag-select-area>
+        <MemoriesStrip kdriveId={kdriveId} />
         <div className="mb-3">
           <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             {t("gallery.photos")}{totalPhotos > 0 && ` (${totalPhotos})`}
@@ -543,6 +555,19 @@ export function GalleryView({ kdriveId, initialPos }: { kdriveId: number; initia
       )}
 
       {toast && <Toast toast={toast} onDismiss={() => setToast(null)} />}
+
+      {/* Drag-select rectangle overlay */}
+      {isDragging && dragRect && (
+        <div
+          className="fixed border-2 border-blue-500 bg-blue-500/15 rounded-sm pointer-events-none z-50"
+          style={{
+            left: dragRect.x,
+            top: dragRect.y,
+            width: dragRect.width,
+            height: dragRect.height,
+          }}
+        />
+      )}
     </>
   );
 }

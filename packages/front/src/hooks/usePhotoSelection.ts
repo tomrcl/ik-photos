@@ -41,6 +41,10 @@ export function usePhotoSelection(allPhotoIds: string[]) {
     lastClickedIdRef.current = null;
   }, []);
 
+  const setSelection = useCallback((ids: Set<string>) => {
+    setSelected(ids);
+  }, []);
+
   const selectionCount = selected.size;
   const selectionActive = selectionCount > 0;
 
@@ -53,5 +57,6 @@ export function usePhotoSelection(allPhotoIds: string[]) {
     selectionActive,
     handleSelect,
     clearSelection,
+    setSelection,
   };
 }

@@ -118,6 +118,7 @@ export function PhotoCard({
   return (
     <div
       ref={ref}
+      data-photo-id={photoId}
       className={`relative aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer group ${
         isSelected ? "ring-3 ring-blue-500" : ""
       }`}
