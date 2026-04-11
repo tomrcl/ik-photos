@@ -61,6 +61,18 @@ export default defineConfig({
                 maxAgeSeconds: 30 * 24 * 60 * 60,
               },
               cacheableResponse: { statuses: [200] },
+              plugins: [
+                {
+                  // Strip volatile query params (token, _t) so the cache key
+                  // stays stable across JWT refreshes and cache-buster bumps.
+                  cacheKeyWillBeUsed: async ({ request }: { request: Request }) => {
+                    const url = new URL(request.url);
+                    url.searchParams.delete("token");
+                    url.searchParams.delete("_t");
+                    return url.href;
+                  },
+                },
+              ],
             },
           },
           {
@@ -73,6 +85,20 @@ export default defineConfig({
                 maxAgeSeconds: 7 * 24 * 60 * 60,
               },
               cacheableResponse: { statuses: [200] },
+              plugins: [
+                {
+                  // Strip token, _t, and dimensions so resized previews still
+                  // hit cache (dimensions rarely change for the same device).
+                  cacheKeyWillBeUsed: async ({ request }: { request: Request }) => {
+                    const url = new URL(request.url);
+                    url.searchParams.delete("token");
+                    url.searchParams.delete("_t");
+                    url.searchParams.delete("w");
+                    url.searchParams.delete("h");
+                    return url.href;
+                  },
+                },
+              ],
             },
           },
           {

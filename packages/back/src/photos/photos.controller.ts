@@ -152,6 +152,7 @@ export class PhotosController {
     await this.rateLimiter.acquire(accountId);
     const { buffer, contentType } = await this.kdrive.fetchPreview(token, kdriveId, foundPhoto.kdriveFileId, width, height);
 
+    res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
     res.setHeader('Content-Type', contentType);
     res.send(buffer);
   }
