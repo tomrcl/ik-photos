@@ -208,9 +208,10 @@ export class PhotosService {
     const currentYear = pick('year');
 
     // Fetch candidate photos in one query, then group + cap per year in JS.
-    // Ordered by year DESC then takenAt DESC so the in-JS slice(0, 20) keeps
-    // the most recent shots of each given day. The id tiebreaker keeps the
-    // order stable across requests when multiple photos share a takenAt.
+    // Uses sortDate (COALESCE(takenAt, lastModifiedAt)) so photos without EXIF
+    // dates still appear in memories based on their file modification date.
+    // Ordered by sortDate DESC so the in-JS slice(0, 20) keeps the most recent
+    // shots of each given day. The id tiebreaker keeps the order stable.
     const rows = await this.dbService.db
       .select()
       .from(photo)
@@ -218,18 +219,17 @@ export class PhotosService {
         and(
           eq(photo.driveId, driveId),
           isNull(photo.deletedAt),
-          isNotNull(photo.takenAt),
-          sql`EXTRACT(MONTH FROM (${photo.takenAt} AT TIME ZONE 'UTC') AT TIME ZONE ${tz}) = ${todayMonth}`,
-          sql`EXTRACT(DAY FROM (${photo.takenAt} AT TIME ZONE 'UTC') AT TIME ZONE ${tz}) = ${todayDay}`,
-          sql`EXTRACT(YEAR FROM (${photo.takenAt} AT TIME ZONE 'UTC') AT TIME ZONE ${tz}) < ${currentYear}`,
+          sql`EXTRACT(MONTH FROM (${photo.sortDate} AT TIME ZONE 'UTC') AT TIME ZONE ${tz}) = ${todayMonth}`,
+          sql`EXTRACT(DAY FROM (${photo.sortDate} AT TIME ZONE 'UTC') AT TIME ZONE ${tz}) = ${todayDay}`,
+          sql`EXTRACT(YEAR FROM (${photo.sortDate} AT TIME ZONE 'UTC') AT TIME ZONE ${tz}) < ${currentYear}`,
         ),
       )
-      .orderBy(desc(photo.takenAt), desc(photo.id));
+      .orderBy(desc(photo.sortDate), desc(photo.id));
 
     const byYear = new Map<number, PhotoRow[]>();
     for (const row of rows) {
-      if (!row.takenAt) continue;
-      const year = row.takenAt.getFullYear();
+      const d = row.takenAt ?? row.lastModifiedAt;
+      const year = d.getFullYear();
       const bucket = byYear.get(year);
       if (bucket) {
         if (bucket.length < 20) bucket.push(row);
