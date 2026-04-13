@@ -5,30 +5,48 @@ import { navigate } from "./hooks/useHash.ts";
 import { App } from "./App.tsx";
 import { API_BASE } from "./config.ts";
 
-async function boot() {
-  // Check local mode on every boot
+async function checkLocalSession(): Promise<void> {
   try {
     const res = await fetch(`${API_BASE}/auth/local-session`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data.enabled) {
-        setLocalMode(true);
-        if (data.accessToken) {
-          saveAccessToken(data.accessToken);
-          if (!window.location.hash || window.location.hash === "#" || window.location.hash === "#login" || window.location.hash === "#register") {
-            navigate("drives");
-          }
-        } else {
-          // No token yet — show the token input mire
-          navigate("login");
-        }
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.enabled) return;
+    setLocalMode(true);
+    if (data.accessToken) {
+      saveAccessToken(data.accessToken);
+      const hash = window.location.hash;
+      if (!hash || hash === "#" || hash === "#login" || hash === "#register") {
+        navigate("drives");
       }
+    } else {
+      navigate("login");
     }
   } catch {
     // Backend not reachable, continue normally
   }
+}
 
-  // If not logged in, try to recover session via refresh token
+function renderApp(): void {
+  if (!window.location.hash || window.location.hash === "#") {
+    navigate(isLoggedIn() ? "drives" : "login");
+  }
+  createRoot(document.getElementById("app")!).render(<App />);
+}
+
+async function boot() {
+  // Fast path: we already have a cached access token, render immediately.
+  // Local-mode detection and JWT expiry are handled asynchronously — an expired
+  // token is auto-refreshed by the 401 interceptor in apiFetch (api/client.ts).
+  if (isLoggedIn()) {
+    void checkLocalSession();
+    renderApp();
+    return;
+  }
+
+  // Slow path: no cached token — we must await auth checks before routing,
+  // otherwise the user would flash to the login screen unnecessarily.
+  await checkLocalSession();
+
   if (!isLoggedIn()) {
     try {
       const refreshToken = getRefreshToken();
@@ -49,11 +67,7 @@ async function boot() {
     }
   }
 
-  if (!window.location.hash || window.location.hash === "#") {
-    navigate(isLoggedIn() ? "drives" : "login");
-  }
-
-  createRoot(document.getElementById("app")!).render(<App />);
+  renderApp();
 }
 
 boot();

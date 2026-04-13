@@ -105,6 +105,7 @@ export function logout(): void {
   if (typeof caches !== "undefined") {
     Promise.all([
       caches.delete("api-cache"),
+      caches.delete("photos-list-cache"),
       caches.delete("thumbnails-cache"),
       caches.delete("previews-cache"),
     ]).catch(() => {});

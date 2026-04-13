@@ -2,7 +2,7 @@
 
 import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from "workbox-precaching";
 import { registerRoute, NavigationRoute } from "workbox-routing";
-import { CacheFirst, NetworkFirst } from "workbox-strategies";
+import { CacheFirst, NetworkFirst, StaleWhileRevalidate } from "workbox-strategies";
 import { ExpirationPlugin } from "workbox-expiration";
 import { CacheableResponsePlugin } from "workbox-cacheable-response";
 
@@ -41,6 +41,17 @@ function stripParamsPlugin(...params: string[]) {
 // `url.pathname` to stay origin-agnostic.
 const thumbnailRe = /^\/api\/drives\/[^/]+\/photos\/[^/]+\/thumbnail$/;
 const previewRe = /^\/api\/drives\/[^/]+\/photos\/[^/]+\/preview$/;
+const photosListRe = /^\/api\/drives\/[^/]+\/photos\/(months|years|memories|geo|all)$/;
+const photosRootRe = /^\/api\/drives\/[^/]+\/photos$/;
+
+function isPhotosList(url: URL): boolean {
+  if (photosListRe.test(url.pathname)) return true;
+  // Month photo list: /api/drives/{id}/photos?year=X&month=Y
+  if (photosRootRe.test(url.pathname) && url.searchParams.has("year") && url.searchParams.has("month")) {
+    return true;
+  }
+  return false;
+}
 
 // ── Thumbnails (CacheFirst, 30 days) ────────────────────────────────────────
 registerRoute(
@@ -64,6 +75,19 @@ registerRoute(
       new CacheableResponsePlugin({ statuses: [200] }),
       new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 7 * 24 * 60 * 60 }),
       stripParamsPlugin("token", "_t", "w", "h"),
+    ],
+  }),
+);
+
+// ── Photo list endpoints (StaleWhileRevalidate, 7 days) ────────────────────
+// Serves instantly from cache on boot, then refreshes in background.
+registerRoute(
+  ({ url, request }) => request.method === "GET" && isPhotosList(url),
+  new StaleWhileRevalidate({
+    cacheName: "photos-list-cache",
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [200] }),
+      new ExpirationPlugin({ maxEntries: 500, maxAgeSeconds: 7 * 24 * 60 * 60 }),
     ],
   }),
 );
