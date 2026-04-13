@@ -208,6 +208,12 @@ export function Header({ breadcrumbs, menuItems }: { breadcrumbs: Breadcrumb[]; 
                 </svg>
                 {t("menu.logout")}
               </button>
+
+              <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+              <div className="px-3 py-1.5 text-xs text-gray-400 dark:text-gray-500 flex items-center justify-between">
+                <span>{t("menu.version")}</span>
+                <span className="font-mono">{import.meta.env.VITE_APP_VERSION ?? "dev"}</span>
+              </div>
             </div>
           )}
         </div>

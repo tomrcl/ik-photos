@@ -121,6 +121,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
 
@@ -131,10 +133,22 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Resolve app version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "dev")
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building with version: $VERSION"
+
       - name: Build frontend
         run: pnpm --filter @ik-photos/front build
         env:
           VITE_API_BASE: ${{ vars.VITE_API_BASE }}
+          VITE_APP_VERSION: ${{ steps.version.outputs.version }}
 
       - name: Deploy to AlwaysData
         uses: appleboy/scp-action@v0.1.7

@@ -36,6 +36,7 @@ export default {
   "menu.logout": "Abmelden",
   "menu.map": "Karte",
   "menu.showMemories": "Erinnerungen anzeigen",
+  "menu.version": "Version",
 
   // PWA
   "pwa.updateAvailable": "Neue Version verfügbar",
