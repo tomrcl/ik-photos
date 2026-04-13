@@ -85,6 +85,7 @@ export function LightboxView({
   useEffect(() => {
     if (isVideo) { setShowPreview(false); setPreviewCached(false); return; }
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.src = bustUrl(previewUrl(kdriveId, currentId));
     if (img.complete && img.naturalWidth > 0) {
       setPreviewCached(true);
@@ -106,6 +107,7 @@ export function LightboxView({
     if (nextIndex !== prevIndex && siblings[nextIndex].mediaType !== "video") toPreload.push(siblings[nextIndex]);
     for (const photo of toPreload) {
       const img = new Image();
+      img.crossOrigin = "anonymous";
       img.src = previewUrl(kdriveId, photo.id);
     }
   }, [showPreview, siblings, currentIndex, kdriveId]);
@@ -454,6 +456,7 @@ export function LightboxView({
                   key={`thumb-${currentId}-${cacheBuster}`}
                   src={bustUrl(thumbnailUrl(kdriveId, currentId))}
                   alt={currentFile?.name ?? ""}
+                  crossOrigin="anonymous"
                   className="object-contain absolute inset-0 w-full h-full"
                   draggable={false}
                 />
@@ -473,6 +476,7 @@ export function LightboxView({
                   key={`preview-${currentId}-${cacheBuster}`}
                   src={bustUrl(previewUrl(kdriveId, currentId))}
                   alt={currentFile?.name ?? ""}
+                  crossOrigin="anonymous"
                   className={`object-contain absolute inset-0 w-full h-full${previewCached ? "" : " animate-fade-in"}`}
                   draggable={false}
                 />

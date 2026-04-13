@@ -149,6 +149,7 @@ export function MapView({ kdriveId }: { kdriveId: number }) {
                           width={120}
                           height={120}
                           loading="lazy"
+                          crossOrigin="anonymous"
                           className="rounded"
                           style={{ objectFit: "cover" }}
                         />

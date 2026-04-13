@@ -148,6 +148,7 @@ export function PhotoCard({
           key={retryCount}
           src={thumbUrl}
           alt={fileName}
+          crossOrigin="anonymous"
           draggable={false}
           onLoad={handleImgLoad}
           onError={handleImgError}

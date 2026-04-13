@@ -5,10 +5,10 @@ const STORAGE_KEY = "ik-photos:memories-enabled";
 function read(): boolean {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === null) return true;
+    if (raw === null) return false;
     return raw === "true";
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -37,7 +37,7 @@ function notify() {
 /**
  * Read/write the `memories enabled` flag from localStorage. Reactive: all
  * consumers re-render when the value changes (within the same tab or via a
- * `storage` event from another tab). Defaults to `true`.
+ * `storage` event from another tab). Defaults to `false`.
  */
 export function useMemoriesEnabled(): [boolean, (b: boolean) => void] {
   const enabled = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);

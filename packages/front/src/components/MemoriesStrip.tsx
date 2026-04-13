@@ -55,6 +55,7 @@ export function MemoriesStrip({ kdriveId }: MemoriesStripProps) {
                     src={thumbnailUrl(kdriveId, p.id)}
                     alt=""
                     loading="lazy"
+                    crossOrigin="anonymous"
                     className="w-full h-full object-cover"
                   />
                 </button>
