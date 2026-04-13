@@ -35,9 +35,16 @@ function stripParamsPlugin(...params: string[]) {
   };
 }
 
+// Workbox's RegExp matcher only matches cross-origin URLs when the regex
+// matches at index 0 of the full href. Our API runs on a different origin
+// (e.g. :3004 vs front :3003 in dev), so we use function matchers against
+// `url.pathname` to stay origin-agnostic.
+const thumbnailRe = /^\/api\/drives\/[^/]+\/photos\/[^/]+\/thumbnail$/;
+const previewRe = /^\/api\/drives\/[^/]+\/photos\/[^/]+\/preview$/;
+
 // ── Thumbnails (CacheFirst, 30 days) ────────────────────────────────────────
 registerRoute(
-  /\/api\/drives\/.+\/photos\/.+\/thumbnail/,
+  ({ url }) => thumbnailRe.test(url.pathname),
   new CacheFirst({
     cacheName: "thumbnails-cache",
     plugins: [
@@ -50,7 +57,7 @@ registerRoute(
 
 // ── Previews (CacheFirst, 7 days) ───────────────────────────────────────────
 registerRoute(
-  /\/api\/drives\/.+\/photos\/.+\/preview/,
+  ({ url }) => previewRe.test(url.pathname),
   new CacheFirst({
     cacheName: "previews-cache",
     plugins: [
@@ -63,7 +70,7 @@ registerRoute(
 
 // ── General API (NetworkFirst, 1 hour) ──────────────────────────────────────
 registerRoute(
-  /\/api\//,
+  ({ url }) => url.pathname.startsWith("/api/"),
   new NetworkFirst({
     cacheName: "api-cache",
     networkTimeoutSeconds: 3,
